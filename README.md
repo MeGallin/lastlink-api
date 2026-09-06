@@ -1,0 +1,82 @@
+# LastLink API
+
+Minimal backend foundation for LastLink, a late-night journey viability application.
+
+**Current scope:** process health only. No TfL/Darwin integration, journey assessment, database, AI, Docker image or deployed service exists yet.
+
+## Run locally
+
+Use Node.js 22 (22.18.0 or newer within that major) and npm.
+
+```sh
+npm ci
+npm run dev
+```
+
+Open http://localhost:3000/health. It returns:
+
+```json
+{ "status": "ok", "service": "lastlink-api" }
+```
+
+This is process liveness, not transport service status or a journey guarantee.
+Unknown paths and unsupported methods return a JSON 404.
+
+Configuration defaults to PORT=3000 and NODE_ENV=development. Optionally copy
+.env.example to .env and edit it locally. Invalid configuration stops startup.
+The Node process runs independently of Apache/XAMPP even when stored under htdocs.
+
+## Checks and production build
+
+```sh
+npm run check
+npm run build
+npm start
+```
+
+Individual commands: npm run typecheck, npm run lint, npm run format:check,
+npm run format, npm test. Tests cover health, missing routes, unsupported methods,
+configuration defaults, accepted values and invalid values.
+
+## Postman
+
+1. Start the API in one terminal.
+2. Import postman/lastlink-api.postman_collection.json into Postman.
+3. Import postman/local.postman_environment.json and select LastLink local.
+4. Run the collection. Change baseUrl if using a different port.
+
+The collection was verified using Newman 6.2.2 against localhost during setup
+(3 requests, 7 passing assertions). Newman was then removed because its dependency
+tree reported security advisories. It is not installed by npm ci. Use Postman's
+collection runner for subsequent collection runs; selecting a maintained automated
+Postman runner remains an open tooling item. Automated HTTP tests remain available
+through npm test.
+Keep private environment exports out of Git (use the ignored *.local.json suffix).
+
+## Layout
+
+- src/app.ts: Express application and the two current response paths.
+- src/config.ts: environment validation.
+- src/server.ts: process startup and graceful shutdown.
+- tests/: automated HTTP and configuration tests.
+- postman/: collection and safe local environment template.
+
+## Delivery workflow
+
+This initial baseline establishes main. Use a small feature branch for each next
+increment, run checks, inspect the diff, commit and push for review. Do not
+force-push shared history. GitHub Actions and branch protection are not configured
+yet; local checks are the current gate.
+
+Next: review this foundation together, then add Docker packaging and verify health
+inside the container for the planned Render deployment. Do not add features ahead
+of that review. No paid service or provider call is needed for this checkpoint.
+
+## Project context
+
+The separate planning workspace holds the canonical outputs/memory.md,
+outputs/00-project-register.md and TECH-02 v0.5. These private planning records
+are not copied to this public repository. Read AGENTS.md before agent-assisted work.
+
+Dependency versions are locked in package-lock.json. Node patch upgrades and
+dependency updates should be reviewed and tested before deployment.

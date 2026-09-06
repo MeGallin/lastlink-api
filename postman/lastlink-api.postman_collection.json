@@ -1,0 +1,66 @@
+{
+  "info": {
+    "name": "LastLink API foundation",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('JSON content type', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json'));",
+              "pm.test('Liveness contract', () => pm.expect(pm.response.json()).to.deep.equal({status: 'ok', service: 'lastlink-api'}));",
+              "pm.test('Not cached', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown route",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/missing"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error contract', () => pm.expect(pm.response.json()).to.deep.equal({error: {code: 'NOT_FOUND', message: 'Route not found'}}));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unsupported health method",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
