@@ -2,7 +2,7 @@
 
 Minimal backend foundation for LastLink, a late-night journey viability application.
 
-**Current scope:** process health only. No TfL/Darwin integration, journey assessment, database, AI, Docker image or deployed service exists yet.
+**Current scope:** process health and two explicitly fictional demo routes. No live TfL/Darwin integration, passenger journey assessment, database, AI, Docker image or deployed service exists yet.
 
 ## Run locally
 
@@ -40,6 +40,19 @@ configuration defaults, accepted values and invalid values.
 
 ## Postman
 
+For the second checkpoint, import postman/demo-routes.postman_collection.json
+as a separate collection and reuse LastLink local. It contains eight requests
+covering health, scenario discovery, two buffer values and input/error handling.
+The original foundation collection remains unchanged.
+
+Demo endpoints:
+
+- GET /api/v1/demo/scenarios
+- POST /api/v1/demo/journey-check
+
+See [the demo contract](docs/demo-contract.md) for request examples, validation
+and arithmetic rules. All results are synthetic and explicitly not travel advice.
+
 1. Start the API in one terminal.
 2. Import postman/lastlink-api.postman_collection.json into Postman.
 3. Import postman/local.postman_environment.json and select LastLink local.
@@ -58,6 +71,7 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 - src/app.ts: Express application and the two current response paths.
 - src/config.ts: environment validation.
 - src/server.ts: process startup and graceful shutdown.
+- src/demo/: fixture, pure margin calculation and HTTP routing/validation.
 - tests/: automated HTTP and configuration tests.
 - postman/: collection and safe local environment template.
 
@@ -68,9 +82,9 @@ increment, run checks, inspect the diff, commit and push for review. Do not
 force-push shared history. GitHub Actions and branch protection are not configured
 yet; local checks are the current gate.
 
-Next: review this foundation together, then add Docker packaging and verify health
-inside the container for the planned Render deployment. Do not add features ahead
-of that review. No paid service or provider call is needed for this checkpoint.
+The owner requested two routes before Docker. Review the demo checkpoint before
+adding further behaviour; Docker packaging for Render remains deferred.
+No paid service or provider call is needed for this checkpoint.
 
 ## Project context
 

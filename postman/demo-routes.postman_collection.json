@@ -1,0 +1,254 @@
+{
+  "info": {
+    "name": "LastLink demo routes",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Synthetic fixture tests only; never live journey advice."
+  },
+  "item": [
+    {
+      "name": "Existing health regression",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Service', () => pm.expect(pm.response.json().service).to.equal('lastlink-api'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List fictional scenarios",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/demo/scenarios"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Fixture catalog', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.scenarios).to.have.lengthOf(1); pm.expect(b.scenarios[0].id).to.equal('stratford-waterloo-demo'); });",
+              "pm.test('No cache', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Check with 5-minute buffer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scenarioId\": \"stratford-waterloo-demo\",\n  \"safetyBufferMinutes\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not live travel advice', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.liveJourneyVerified).to.equal(false); pm.expect(b.warning).to.include('Do not use for travel'); });",
+              "pm.test('Calculated margin', () => { const s=pm.response.json().simulation; pm.expect(s.connectionMarginMinutes).to.equal(5); pm.expect(s.remainingAfterBufferMinutes).to.equal(0); pm.expect(s.outcome).to.equal('buffer_met'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Check with 6-minute buffer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scenarioId\": \"stratford-waterloo-demo\",\n  \"safetyBufferMinutes\": 6\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not live travel advice', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.liveJourneyVerified).to.equal(false); pm.expect(b.warning).to.include('Do not use for travel'); });",
+              "pm.test('Calculated margin', () => { const s=pm.response.json().simulation; pm.expect(s.connectionMarginMinutes).to.equal(5); pm.expect(s.remainingAfterBufferMinutes).to.equal(-1); pm.expect(s.outcome).to.equal('buffer_not_met'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject negative buffer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scenarioId\": \"stratford-waterloo-demo\",\n  \"safetyBufferMinutes\": -1\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Safe error code', () => pm.expect(pm.response.json().error.code).to.equal('INVALID_INPUT'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject unknown scenario",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"scenarioId\":\"missing\",\"safetyBufferMinutes\":5}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Safe error code', () => pm.expect(pm.response.json().error.code).to.equal('SCENARIO_NOT_FOUND'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject malformed JSON",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"scenarioId\":",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Safe error code', () => pm.expect(pm.response.json().error.code).to.equal('INVALID_JSON'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject wrong content type",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/demo/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "text/plain"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scenarioId\": \"stratford-waterloo-demo\",\n  \"safetyBufferMinutes\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 415', () => pm.response.to.have.status(415));",
+              "pm.test('Safe error code', () => pm.expect(pm.response.json().error.code).to.equal('UNSUPPORTED_MEDIA_TYPE'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

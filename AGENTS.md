@@ -14,4 +14,4 @@ The canonical project memory remains in the separate planning workspace, at outp
 - Run npm run check and the Postman collection for HTTP changes. Record actual results, not assumed passes.
 - Small feature branches and descriptive commits after this initial baseline; no force pushes.
 - Update the canonical planning memory at each checkpoint.
-- Next checkpoint is review, then Docker packaging for Render. No provider, database, AI or frontend work yet.
+- Current increment: two fictional demo routes (docs/demo-contract.md). Stop for review before adding routes or live integration. Docker for Render remains deferred by the owner's latest sequencing. No provider, database, AI or frontend work yet.
