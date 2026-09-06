@@ -13,5 +13,6 @@ The canonical project memory remains in the separate planning workspace, at outp
 - Never commit credentials, local environment files or raw personal journey records.
 - Run npm run check and the Postman collection for HTTP changes. Record actual results, not assumed passes.
 - Small feature branches and descriptive commits after this initial baseline; no force pushes.
+- Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
 - Current increment: two fictional demo routes (docs/demo-contract.md). Stop for review before adding routes or live integration. Docker for Render remains deferred by the owner's latest sequencing. No provider, database, AI or frontend work yet.

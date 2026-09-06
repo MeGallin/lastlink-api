@@ -36,7 +36,7 @@ npm start
 
 Individual commands: npm run typecheck, npm run lint, npm run format:check,
 npm run format, npm test. Tests cover health, missing routes, unsupported methods,
-configuration defaults, accepted values and invalid values.
+configuration defaults, demo input validation, margin arithmetic and boundaries.
 
 ## Postman
 
@@ -68,7 +68,7 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 
 ## Layout
 
-- src/app.ts: Express application and the two current response paths.
+- src/app.ts: Express setup, health, demo-router mounting and fallback.
 - src/config.ts: environment validation.
 - src/server.ts: process startup and graceful shutdown.
 - src/demo/: fixture, pure margin calculation and HTTP routing/validation.
@@ -77,10 +77,13 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 
 ## Delivery workflow
 
-This initial baseline establishes main. Use a small feature branch for each next
-increment, run checks, inspect the diff, commit and push for review. Do not
-force-push shared history. GitHub Actions and branch protection are not configured
-yet; local checks are the current gate.
+Use a small feature branch for each increment. Implement, test, obtain independent
+agent review, fix findings and re-review BEFORE committing. Verify the committed
+content matches the approved content BEFORE pushing. See
+[the mandatory review workflow](docs/code-review-workflow.md).
+Do not force-push shared history. GitHub Actions, branch protection and local Git
+hooks are not configured; this is a mandatory agent workflow, not a Git-enforced
+or guaranteed defect-free certification. Human review remains valuable.
 
 The owner requested two routes before Docker. Review the demo checkpoint before
 adding further behaviour; Docker packaging for Render remains deferred.
