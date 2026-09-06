@@ -15,4 +15,4 @@ The canonical project memory remains in the separate planning workspace, at outp
 - Small feature branches and descriptive commits after this initial baseline; no force pushes.
 - Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
-- Current increment: two fictional demo routes (docs/demo-contract.md). Stop for review before adding routes or live integration. Docker for Render remains deferred by the owner's latest sequencing. No provider, database, AI or frontend work yet.
+- Current increment: locally tested Docker packaging (docs/docker.md). Obtain independent exact-tree approval before commit/push, then pause for owner review. No deployment or new routes. Preserve the owner's VS Code server on port 3000; use port 3001 for container tests.

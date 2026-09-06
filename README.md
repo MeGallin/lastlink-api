@@ -2,7 +2,7 @@
 
 Minimal backend foundation for LastLink, a late-night journey viability application.
 
-**Current scope:** process health and two explicitly fictional demo routes. No live TfL/Darwin integration, passenger journey assessment, database, AI, Docker image or deployed service exists yet.
+**Current scope:** process health and two explicitly fictional demo routes, with locally tested Docker packaging. No live TfL/Darwin integration, passenger journey assessment, database, AI or deployed service exists yet.
 
 ## Run locally
 
@@ -85,9 +85,11 @@ Do not force-push shared history. GitHub Actions, branch protection and local Gi
 hooks are not configured; this is a mandatory agent workflow, not a Git-enforced
 or guaranteed defect-free certification. Human review remains valuable.
 
-The owner requested two routes before Docker. Review the demo checkpoint before
-adding further behaviour; Docker packaging for Render remains deferred.
-No paid service or provider call is needed for this checkpoint.
+The demo and local Docker runtime checks are complete. See
+[Docker instructions](docs/docker.md) for build/run commands and verification.
+Every commit/push still requires the independent review gate above.
+Use port 3001 for container testing so the owner's VS Code server stays on 3000.
+Render deployment and further application behaviour remain deferred.
 
 ## Project context
 
