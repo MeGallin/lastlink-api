@@ -11,20 +11,25 @@ export function createJourneyRouter(): Router {
     next();
   });
 
-  router.post('/', requireJson, json({ limit: '8kb' }), (request, response) => {
-    const validation = validateJourneyCheckRequest(request.body as unknown);
-    if (!validation.ok) {
-      response.status(400).json({
-        error: {
-          code: 'INVALID_INPUT',
-          message: validation.issues.join('; '),
-        },
-      });
-      return;
-    }
-    const assessment = createFixtureAssessment(validation.value);
-    response.json(evaluateJourneyCheck(assessment));
-  });
+  router.post(
+    '/',
+    requireJson,
+    json({ limit: '8kb' }),
+    async (request, response) => {
+      const validation = validateJourneyCheckRequest(request.body as unknown);
+      if (!validation.ok) {
+        response.status(400).json({
+          error: {
+            code: 'INVALID_INPUT',
+            message: validation.issues.join('; '),
+          },
+        });
+        return;
+      }
+      const assessment = await createFixtureAssessment(validation.value);
+      response.json(evaluateJourneyCheck(assessment));
+    },
+  );
 
   // Do not leak submitted bodies, stack traces or parser details.
   router.use(createJsonErrorHandler('JSON body exceeds 8kb'));

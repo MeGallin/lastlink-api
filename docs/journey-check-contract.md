@@ -5,10 +5,10 @@ increment. The current HTTP boundary is fixture-only and exists for controlled
 validation; it is not a live journey service. The existing `/api/v1/demo/*`
 routes remain synthetic examples and are intentionally unchanged.
 
-The internal validator/evaluator and labelled fixtures for this contract are now
-implemented under `src/journey/`. A fixture-only HTTP boundary is available at the
-proposed path for controlled testing; provider adapters and live journey
-verification remain deferred.
+The internal validator/evaluator, labelled fixtures and normalized provider
+snapshot composition are implemented under `src/journey/` and `src/providers/`.
+A fixture-only HTTP boundary is available at the proposed path for controlled
+testing; live provider adapters and live journey verification remain deferred.
 
 The contract is designed around one question:
 
@@ -38,6 +38,31 @@ The contract is designed around one question:
 The endpoint will require `Content-Type: application/json`, reject unknown fields
 and return `Cache-Control: no-store`. The exact HTTP error envelope will follow
 the existing `{ error: { code, message } }` convention.
+
+## Provider adapter boundary
+
+The evaluator accepts normalized evidence and does not know whether it came from
+TfL, Darwin, a short-lived cache or a fixture. Provider-specific parsing belongs
+inside adapters. The current TypeScript boundary is:
+
+- `JourneyPlannerAdapter.getPlan(request)` returns a `ProviderSnapshot` whose
+  value is a normalized route plus the separately represented transfer allowance.
+- `ProtectedDepartureAdapter.getProtectedDeparture(request)` returns a
+  `ProviderSnapshot` whose value is the reconciled protected event.
+- Every snapshot carries `dataMode` and provenance `evidence`; raw provider
+  payloads, credentials and provider-specific response shapes do not cross the
+  boundary.
+- `buildJourneyAssessment` combines the two snapshots into the evaluator input
+  and rejects mixed data modes rather than silently combining live and cached
+  evidence under one answer. A future reviewed policy may define an explicit
+  mixed-mode rule.
+
+The current fixture adapter implements both contracts with deterministic data. It
+uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
+request cannot select individual evaluator scenarios. This is deliberate test
+infrastructure, not live transport behaviour. Live TfL/Darwin adapters must add
+provider error mapping, request budgets, timestamp reconciliation and empirical
+late-service validation before this route can be considered for a pilot.
 
 ## Request
 

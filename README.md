@@ -2,7 +2,10 @@
 
 Minimal backend foundation for LastLink, a late-night journey viability application.
 
-**Current scope:** process health and two explicitly fictional demo routes, with locally tested Docker packaging. No live TfL/Darwin integration, passenger journey assessment, database, AI or deployed service exists yet.
+**Current scope:** process health, two explicitly fictional demo routes and a
+fixture-only journey-check boundary, with locally tested Docker packaging. No
+live TfL/Darwin integration, passenger-facing production assessment, database,
+AI or deployed service exists yet.
 
 ## Run locally
 
@@ -85,6 +88,10 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 - src/demo/: fixture, pure margin calculation and HTTP routing/validation.
 - src/journey/: provider-neutral request validation, deterministic evaluation and
   labelled fixture inputs; no provider or HTTP dependency.
+- src/journey/assessment.ts: composition of normalized provider snapshots for the
+  evaluator.
+- src/providers/contracts.ts: narrow TfL/Darwin adapter contracts; raw provider
+  payloads stay inside future adapters.
 - src/routes/journey-check.ts: fixture-only HTTP boundary for the evaluator.
 - src/http/json-errors.ts: shared safe JSON parsing/error middleware.
 - tests/: automated HTTP and configuration tests.
