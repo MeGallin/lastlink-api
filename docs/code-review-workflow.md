@@ -134,7 +134,10 @@ This is a mandatory instruction for agents working in this repository. If an
 independent reviewer cannot run, stop before committing or pushing and explain
 the blocker. Do not substitute self-review.
 
-No Git hooks, CI reviewer or GitHub branch-protection rule has been installed by
-this policy. Git itself does not technically prevent a manual bypass. Such
-enforcement can be discussed as a separate increment; do not present a checkbox
-or hook as proof that meaningful independent review occurred.
+No Git hooks, automated CI reviewer or GitHub branch-protection rule has been
+installed by this policy. A lightweight GitHub Actions check is configured to
+run the repository's install, formatting, lint, typecheck, test and build
+commands; its first remote run remains pending until the workflow is pushed. It
+does not call live providers and does not replace the independent reviewer.
+Git itself does not technically prevent a manual bypass. Do not present a
+passing CI checkbox as proof that meaningful independent review occurred.

@@ -104,11 +104,17 @@ optional for risky or isolated work, or when the Product Owner requests it. In e
 case, implement one bounded change, test it, obtain independent agent review, fix
 findings and re-review BEFORE committing. Verify the committed content matches the
 approved content BEFORE pushing. See [the mandatory review workflow](docs/code-review-workflow.md).
-Do not force-push shared history. GitHub Actions, branch protection and local Git
-hooks are not configured; this is a mandatory agent workflow, not a Git-enforced
-or guaranteed defect-free certification. Human review remains valuable.
+Do not force-push shared history. Branch protection and local Git hooks are not
+configured; the independent review remains a mandatory agent workflow, not a
+Git-enforced or guaranteed defect-free certification. Human review remains
+valuable.
 
-The demo and local Docker runtime checks are complete. See
+The demo and local Docker runtime checks are complete. A lightweight GitHub
+Actions check is configured to run `npm ci` and `npm run check` for pushes to
+`main` and pull requests; its first remote run remains pending until this
+workflow is pushed. It does not call TfL/Darwin or replace the independent
+review gate.
+See
 [Docker instructions](docs/docker.md) for build/run commands and verification.
 Every commit/push still requires the independent review gate above.
 Use port 3001 for container testing so the owner's VS Code server stays on 3000.
