@@ -137,7 +137,8 @@ the blocker. Do not substitute self-review.
 No Git hooks, automated CI reviewer or GitHub branch-protection rule has been
 installed by this policy. A lightweight GitHub Actions check is configured to
 run the repository's install, formatting, lint, typecheck, test and build
-commands; its first remote run remains pending until the workflow is pushed. It
+commands. Its first remote run passed with a Node 20 runtime warning; the
+follow-up run using the current action runtimes passed without that warning. CI
 does not call live providers and does not replace the independent reviewer.
 Git itself does not technically prevent a manual bypass. Do not present a
 passing CI checkbox as proof that meaningful independent review occurred.

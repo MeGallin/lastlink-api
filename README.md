@@ -111,9 +111,10 @@ valuable.
 
 The demo and local Docker runtime checks are complete. A lightweight GitHub
 Actions check is configured to run `npm ci` and `npm run check` for pushes to
-`main` and pull requests; its first remote run remains pending until this
-workflow is pushed. It does not call TfL/Darwin or replace the independent
-review gate.
+`main` and pull requests. The first remote run passed with a Node 20 runtime
+warning; after updating the action runtimes, the second run also passed without
+that warning. CI does not call TfL/Darwin or replace the independent review
+gate.
 See
 [Docker instructions](docs/docker.md) for build/run commands and verification.
 Every commit/push still requires the independent review gate above.
