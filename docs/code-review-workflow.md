@@ -5,6 +5,20 @@ Applies to every future commit and push, including documentation, configuration,
 dependencies, tests and fixes. Earlier commits were made before this requirement;
 reviewing them now is retrospective, never a claim of prior approval.
 
+## Latest reviewed checkpoint
+
+On 7 September 2026, the provider-failure refinement was independently reviewed
+before commit and push. The exact staged tree was
+`07a7b46011bc2a4be8b53a1032fe9a268355b774`, based on
+`141b3b8788b1005ff94333a95e42864c7cf5de8d`, covering the provider snapshot
+type, evaluator failure aggregation, contract documentation and regression
+tests. `/root/code_reviewer` returned PASS with no P0–P2 blockers and
+independently verified formatting, lint, typecheck, 77 tests, build and staged
+whitespace. The reviewed candidate was committed as
+`4e90a076cebf801e0143f93fbd7d8b371cf14a46` and pushed to `main` only after the
+approval. The remaining P3 is a compile-time negative regression test for a
+non-null failure value.
+
 ## Branch policy
 
 `main` is the normal development and integration branch for this owner/agent
