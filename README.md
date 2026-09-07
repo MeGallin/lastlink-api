@@ -81,10 +81,11 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 
 ## Delivery workflow
 
-Use a small feature branch for each increment. Implement, test, obtain independent
-agent review, fix findings and re-review BEFORE committing. Verify the committed
-content matches the approved content BEFORE pushing. See
-[the mandatory review workflow](docs/code-review-workflow.md).
+Work directly on `main` for ordinary small increments. A separate feature branch is
+optional for risky or isolated work, or when the Product Owner requests it. In either
+case, implement one bounded change, test it, obtain independent agent review, fix
+findings and re-review BEFORE committing. Verify the committed content matches the
+approved content BEFORE pushing. See [the mandatory review workflow](docs/code-review-workflow.md).
 Do not force-push shared history. GitHub Actions, branch protection and local Git
 hooks are not configured; this is a mandatory agent workflow, not a Git-enforced
 or guaranteed defect-free certification. Human review remains valuable.

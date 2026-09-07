@@ -5,6 +5,15 @@ Applies to every future commit and push, including documentation, configuration,
 dependencies, tests and fixes. Earlier commits were made before this requirement;
 reviewing them now is retrospective, never a claim of prior approval.
 
+## Branch policy
+
+`main` is the normal development and integration branch for this owner/agent
+project. Work directly on `main` for ordinary small increments. A separate branch
+is optional for risky experiments, larger or isolated changes, or when the Product
+Owner requests branch isolation. The independent review gate applies to the exact
+candidate on whichever branch is used. No force-pushes are allowed; normal Git
+reverts remain available if a reviewed change later proves unsuitable.
+
 ## Delivery sequence
 
 1. Read AGENTS.md, README.md, the relevant contract and current planning baseline.
@@ -30,10 +39,13 @@ reviewing them now is retrospective, never a claim of prior approval.
 8. Commit only that approved staged tree. Compare HEAD^{tree} with the approved
    tree ID. Any material edit after approval invalidates approval and requires
    review again. Do not add an unreviewed last-minute documentation edit.
-9. Before push, verify branch, remote, outgoing commits and the matching review
-   record. Every new outgoing commit must have passed this gate. Re-review if
-   code, base, dependencies or scope changed; otherwise verify the existing
-   approval rather than repeating an unchanged review. Do not push if uncertain.
+9. Before push, verify the current branch (normally `main`), remote, outgoing
+   commits and the matching review record. Every new outgoing commit must have
+   passed this gate. If optional branch isolation was used, merge or fast-forward
+   only the reviewed candidate into `main`, then verify the resulting `main` tree.
+   Re-review if code, base, dependencies or scope changed; otherwise verify the
+   existing approval rather than repeating an unchanged review. Do not push if
+   uncertain.
 10. Report commit, push verification, tests, review verdict and remaining limits.
     Pause for owner review before the next increment. Update canonical memory.
 
