@@ -2,7 +2,7 @@
 
 Minimal backend foundation for LastLink, a late-night journey viability application.
 
-**Current scope:** process health only. No TfL/Darwin integration, journey assessment, database, AI, Docker image or deployed service exists yet.
+**Current scope:** process health and two explicitly fictional demo routes, with locally tested Docker packaging. No live TfL/Darwin integration, passenger journey assessment, database, AI or deployed service exists yet.
 
 ## Run locally
 
@@ -36,9 +36,22 @@ npm start
 
 Individual commands: npm run typecheck, npm run lint, npm run format:check,
 npm run format, npm test. Tests cover health, missing routes, unsupported methods,
-configuration defaults, accepted values and invalid values.
+configuration defaults, demo input validation, margin arithmetic and boundaries.
 
 ## Postman
+
+For the second checkpoint, import postman/demo-routes.postman_collection.json
+as a separate collection and reuse LastLink local. It contains eight requests
+covering health, scenario discovery, two buffer values and input/error handling.
+The original foundation collection remains unchanged.
+
+Demo endpoints:
+
+- GET /api/v1/demo/scenarios
+- POST /api/v1/demo/journey-check
+
+See [the demo contract](docs/demo-contract.md) for request examples, validation
+and arithmetic rules. All results are synthetic and explicitly not travel advice.
 
 1. Start the API in one terminal.
 2. Import postman/lastlink-api.postman_collection.json into Postman.
@@ -55,22 +68,28 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 
 ## Layout
 
-- src/app.ts: Express application and the two current response paths.
+- src/app.ts: Express setup, health, demo-router mounting and fallback.
 - src/config.ts: environment validation.
 - src/server.ts: process startup and graceful shutdown.
+- src/demo/: fixture, pure margin calculation and HTTP routing/validation.
 - tests/: automated HTTP and configuration tests.
 - postman/: collection and safe local environment template.
 
 ## Delivery workflow
 
-This initial baseline establishes main. Use a small feature branch for each next
-increment, run checks, inspect the diff, commit and push for review. Do not
-force-push shared history. GitHub Actions and branch protection are not configured
-yet; local checks are the current gate.
+Use a small feature branch for each increment. Implement, test, obtain independent
+agent review, fix findings and re-review BEFORE committing. Verify the committed
+content matches the approved content BEFORE pushing. See
+[the mandatory review workflow](docs/code-review-workflow.md).
+Do not force-push shared history. GitHub Actions, branch protection and local Git
+hooks are not configured; this is a mandatory agent workflow, not a Git-enforced
+or guaranteed defect-free certification. Human review remains valuable.
 
-Next: review this foundation together, then add Docker packaging and verify health
-inside the container for the planned Render deployment. Do not add features ahead
-of that review. No paid service or provider call is needed for this checkpoint.
+The demo and local Docker runtime checks are complete. See
+[Docker instructions](docs/docker.md) for build/run commands and verification.
+Every commit/push still requires the independent review gate above.
+Use port 3001 for container testing so the owner's VS Code server stays on 3000.
+Render deployment and further application behaviour remain deferred.
 
 ## Project context
 

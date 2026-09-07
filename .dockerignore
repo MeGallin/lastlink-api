@@ -1,0 +1,15 @@
+# Allowlist: never send local secrets, Git history or Windows dependencies.
+**
+!Dockerfile
+!.dockerignore
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.build.json
+!eslint.config.mjs
+!.prettierrc.json
+!.prettierignore
+!src/
+!src/**
+!tests/
+!tests/**
