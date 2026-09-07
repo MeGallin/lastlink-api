@@ -54,9 +54,10 @@ inside adapters. The current TypeScript boundary is:
   boundary.
 - A snapshot may carry one normalized failure (`PROVIDER_UNAVAILABLE`,
   `PROVIDER_RATE_LIMITED` or `ARRIVALS_EMPTY_UNKNOWN`) with a safe message and
-  no value. The composition passes these issues to the evaluator, which returns
-  `unable_to_verify` rather than treating an outage or empty response as a
-  successful or definitive no-service result.
+  a `null` value. The composition preserves one issue per failed snapshot and
+  passes all of them to the evaluator, which returns `unable_to_verify` rather
+  than treating an outage or empty response as a successful or definitive
+  no-service result.
 - `buildJourneyAssessment` combines the two snapshots into the evaluator input
   and rejects mixed data modes rather than silently combining live and cached
   evidence under one answer. A future reviewed policy may define an explicit

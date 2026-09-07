@@ -16,12 +16,19 @@ export interface ProviderFailure {
 }
 
 /** Provider adapters return normalized values; raw payloads stay inside adapters. */
-export interface ProviderSnapshot<T> {
-  dataMode: JourneyDataMode;
-  value: T | null;
-  evidence: EvidenceRecord[];
-  failure?: ProviderFailure;
-}
+export type ProviderSnapshot<T> =
+  | {
+      dataMode: JourneyDataMode;
+      value: T | null;
+      evidence: EvidenceRecord[];
+      failure?: undefined;
+    }
+  | {
+      dataMode: JourneyDataMode;
+      value: null;
+      evidence: EvidenceRecord[];
+      failure: ProviderFailure;
+    };
 
 export interface NormalizedJourneyPlan {
   route: JourneyRoute | null;

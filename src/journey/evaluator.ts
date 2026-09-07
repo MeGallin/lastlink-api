@@ -47,13 +47,12 @@ export function evaluateJourneyCheck(
     );
   }
 
-  const providerIssue = input.providerIssues[0];
-  if (providerIssue !== undefined) {
+  if (input.providerIssues.length > 0) {
     return response(
       base,
       'unable_to_verify',
-      providerIssue,
-      'The journey could not be verified because a required provider was unavailable.',
+      input.providerIssues,
+      providerIssueSummary(input.providerIssues),
     );
   }
 
@@ -531,7 +530,7 @@ function response(
     margin: JourneyCheckResponse['margin'];
   },
   status: JourneyCheckResponse['status'],
-  reasonValue: JourneyReason,
+  reasonValue: JourneyReason | JourneyReason[],
   summary: string,
 ): JourneyCheckResponse {
   const liveJourneyVerified =
@@ -548,8 +547,18 @@ function response(
       status === 'viable'
         ? 'Leave now and follow the evaluated route.'
         : 'Recheck for another route or allow more time.',
-    reasons: [reasonValue],
+    reasons: Array.isArray(reasonValue) ? reasonValue : [reasonValue],
   };
+}
+
+function providerIssueSummary(issues: JourneyReason[]): string {
+  if (issues.some((issue) => issue.code === 'ARRIVALS_EMPTY_UNKNOWN')) {
+    return 'Live arrivals were empty, so the service could not be verified.';
+  }
+  if (issues.some((issue) => issue.code === 'PROVIDER_RATE_LIMITED')) {
+    return 'The live transport provider rate-limited this check.';
+  }
+  return 'A required live transport provider was unavailable.';
 }
 
 function reason(code: JourneyReason['code'], message: string): JourneyReason {

@@ -556,8 +556,64 @@ for (const failureCode of [
     assert.equal(result.status, 'unable_to_verify');
     assert.equal(result.reasons[0]?.code, failureCode);
     assert.equal(result.liveJourneyVerified, false);
+    if (failureCode === 'ARRIVALS_EMPTY_UNKNOWN') {
+      assert.equal(
+        result.summary,
+        'Live arrivals were empty, so the service could not be verified.',
+      );
+    }
   });
 }
+
+await test('multiple provider failures remain visible in conservative order', async () => {
+  const fixture = journeyFixtures[0];
+  if (fixture === undefined) throw new Error('Expected a fixture');
+  const validation = validateJourneyCheckRequest(fixture.request);
+  if (!validation.ok) throw new Error(validation.issues.join('; '));
+  const adapters: JourneyProviderAdapters = {
+    journeyPlanner: {
+      async getPlan() {
+        return {
+          dataMode: 'live',
+          value: null,
+          evidence: [],
+          failure: {
+            code: 'PROVIDER_RATE_LIMITED',
+            message: 'The journey planner was rate limited.',
+          },
+        };
+      },
+    },
+    protectedDeparture: {
+      async getProtectedDeparture() {
+        return {
+          dataMode: 'live',
+          value: null,
+          evidence: [],
+          failure: {
+            code: 'ARRIVALS_EMPTY_UNKNOWN',
+            message: 'Arrivals were empty and service state is unknown.',
+          },
+        };
+      },
+    },
+  };
+  const assessment = await buildJourneyAssessment(
+    validation.value,
+    adapters,
+    () => fixture.checkedAtMs,
+  );
+  const result = evaluateJourneyCheck(assessment);
+  assert.equal(result.status, 'unable_to_verify');
+  assert.deepEqual(
+    result.reasons.map((item) => item.code),
+    ['PROVIDER_RATE_LIMITED', 'ARRIVALS_EMPTY_UNKNOWN'],
+  );
+  assert.equal(
+    result.summary,
+    'Live arrivals were empty, so the service could not be verified.',
+  );
+});
 
 await test('evaluation clock is read after both provider snapshots resolve', async () => {
   const fixture = journeyFixtures[0];
