@@ -1,0 +1,136 @@
+{
+  "info": {
+    "name": "LastLink journey-check fixture route",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Internal fixture-only HTTP checks. Responses are synthetic and never travel advice; live TfL/Darwin calls are not used."
+  },
+  "item": [
+    {
+      "name": "Evaluate viable fixture",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSFD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"nationalRailCrs\": \"WAT\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\", \"serviceLabel\": \"Fixture service\" },\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 20, \"stepFreeRequired\": false }\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Fixture and not live', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.liveJourneyVerified).to.equal(false); pm.expect(b.warnings[0]).to.include('Fixture data only'); });",
+              "pm.test('Viable margin', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('viable'); pm.expect(b.margin.remainingAfterBufferMinutes).to.equal(13); });",
+              "pm.test('No cache', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evaluate tight buffer",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\", \"nationalRailCrs\": \"WAT\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 20\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tight result', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('tight'); pm.expect(b.reasons[0].code).to.equal('BUFFER_SHORTFALL'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject route over walking limit",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 10 }\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Constraint is not viable', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('not_viable'); pm.expect(b.reasons[0].code).to.equal('NO_MATCHING_ROUTE'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Unknown fixture returns unable to verify",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Victoria\", \"nationalRailCrs\": \"VIC\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Conservative result', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('unable_to_verify'); pm.expect(b.reasons[0].code).to.equal('EVIDENCE_INCOMPLETE'); pm.expect(b.protectedEvent).to.equal(null); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject invalid request",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Safe error', () => pm.expect(pm.response.json().error.code).to.equal('INVALID_INPUT'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

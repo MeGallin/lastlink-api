@@ -54,9 +54,15 @@ See [the demo contract](docs/demo-contract.md) for request examples, validation
 and arithmetic rules. All results are synthetic and explicitly not travel advice.
 
 The provider-neutral [journey-check contract](docs/journey-check-contract.md) now
-has an internal strict validator, deterministic evaluator and labelled fixtures in
-`src/journey/`. The public endpoint is not implemented yet, and live TfL/Darwin
-calls remain deferred until the adapter boundary is reviewed.
+has a fixture-only `POST /api/v1/journey-check` boundary backed by the internal
+strict validator, deterministic evaluator and labelled fixtures. It is explicitly
+not live travel advice; live TfL/Darwin calls remain deferred until the adapter
+boundary is reviewed.
+
+For this controlled HTTP checkpoint, also import
+`postman/journey-check.postman_collection.json` and run it with LastLink local.
+The collection covers viable, tight, constraint-failure, unable-to-verify and
+invalid-input responses.
 
 1. Start the API in one terminal.
 2. Import postman/lastlink-api.postman_collection.json into Postman.
@@ -79,6 +85,8 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 - src/demo/: fixture, pure margin calculation and HTTP routing/validation.
 - src/journey/: provider-neutral request validation, deterministic evaluation and
   labelled fixture inputs; no provider or HTTP dependency.
+- src/routes/journey-check.ts: fixture-only HTTP boundary for the evaluator.
+- src/http/json-errors.ts: shared safe JSON parsing/error middleware.
 - tests/: automated HTTP and configuration tests.
 - postman/: collection and safe local environment template.
 

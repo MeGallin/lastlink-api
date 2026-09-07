@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import type { ErrorRequestHandler } from 'express';
+import { createJsonErrorHandler, requireJson } from '../http/json-errors.js';
 import { assessDemoMargin } from './margin.js';
 import { demoWarning, scenarios } from './scenarios.js';
 
@@ -37,18 +37,7 @@ export function createDemoRouter() {
 
   router.post(
     '/journey-check',
-    (request, response, next) => {
-      if (!request.is('application/json')) {
-        response.status(415).json({
-          error: {
-            code: 'UNSUPPORTED_MEDIA_TYPE',
-            message: 'Use application/json',
-          },
-        });
-        return;
-      }
-      next();
-    },
+    requireJson,
     json({ limit: '4kb' }),
     (request, response) => {
       const body: unknown = request.body;
@@ -88,48 +77,6 @@ export function createDemoRouter() {
   );
 
   // Do not leak submitted bodies, stack traces or parser details.
-  const handleError: ErrorRequestHandler = (
-    error: unknown,
-    _request,
-    response,
-    next,
-  ) => {
-    if (response.headersSent) {
-      next(error);
-      return;
-    }
-    const type =
-      typeof error === 'object' && error !== null && 'type' in error
-        ? error.type
-        : undefined;
-    const status =
-      typeof error === 'object' && error !== null && 'status' in error
-        ? error.status
-        : undefined;
-    if (type === 'entity.too.large') {
-      response.status(413).json({
-        error: {
-          code: 'PAYLOAD_TOO_LARGE',
-          message: 'JSON body exceeds 4kb',
-        },
-      });
-    } else if (status === 415) {
-      response.status(415).json({
-        error: {
-          code: 'UNSUPPORTED_MEDIA_TYPE',
-          message: 'Unsupported JSON encoding',
-        },
-      });
-    } else if (status === 400) {
-      response.status(400).json({
-        error: { code: 'INVALID_JSON', message: 'Invalid JSON body' },
-      });
-    } else {
-      response.status(500).json({
-        error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error' },
-      });
-    }
-  };
-  router.use(handleError);
+  router.use(createJsonErrorHandler('JSON body exceeds 4kb'));
   return router;
 }

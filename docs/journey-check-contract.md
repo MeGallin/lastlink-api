@@ -1,12 +1,14 @@
 # Journey-check contract v0.1 (proposed)
 
 This is the provider-neutral contract for the first real journey assessment
-increment. It is a design artifact, not an implemented endpoint. The existing
-`/api/v1/demo/*` routes remain synthetic examples and are intentionally unchanged.
+increment. The current HTTP boundary is fixture-only and exists for controlled
+validation; it is not a live journey service. The existing `/api/v1/demo/*`
+routes remain synthetic examples and are intentionally unchanged.
 
 The internal validator/evaluator and labelled fixtures for this contract are now
-implemented under `src/journey/`. The public endpoint and provider adapters remain
-deferred; this increment does not claim live journey verification.
+implemented under `src/journey/`. A fixture-only HTTP boundary is available at the
+proposed path for controlled testing; provider adapters and live journey
+verification remain deferred.
 
 The contract is designed around one question:
 
@@ -350,7 +352,8 @@ production endpoint. Before connecting providers, add deterministic fixtures for
 - The response exposes checked-at/freshness information and material warnings
   without claiming passenger certainty.
 - Postman covers representative success, tight, not-viable and unable-to-verify
-  responses plus invalid input and provider-failure fixtures.
+  responses plus invalid input. Provider-failure mappings remain evaluator
+  fixtures until a reviewed live-adapter boundary exists.
 - The existing demo collection remains passing and clearly labelled synthetic.
 - Live TfL/Darwin integration is a separate reviewed increment after this contract
   is accepted; late-service edge cases still require empirical API validation.

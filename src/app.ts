@@ -1,5 +1,6 @@
 import express from 'express';
 import { createDemoRouter } from './demo/routes.js';
+import { createJourneyRouter } from './routes/journey-check.js';
 
 export function createApp() {
   const app = express();
@@ -13,6 +14,7 @@ export function createApp() {
   });
 
   app.use('/api/v1/demo', createDemoRouter());
+  app.use('/api/v1/journey-check', createJourneyRouter());
 
   app.use((_request, response) => {
     response.status(404).json({
