@@ -1,26 +1,37 @@
 import type {
   JourneyAssessmentInput,
+  JourneyReason,
   ValidatedJourneyCheckRequest,
 } from './types.js';
 import type { JourneyProviderAdapters } from '../providers/contracts.js';
 
+export type JourneyEvaluationClock = () => number;
+
 export async function buildJourneyAssessment(
   request: ValidatedJourneyCheckRequest,
-  checkedAtMs: number,
   adapters: JourneyProviderAdapters,
+  readEvaluationClock: JourneyEvaluationClock = Date.now,
 ): Promise<JourneyAssessmentInput> {
-  if (!Number.isFinite(checkedAtMs)) {
-    throw new Error('Invalid checkedAtMs');
-  }
-
   const [planSnapshot, protectedDepartureSnapshot] = await Promise.all([
     adapters.journeyPlanner.getPlan(request),
     adapters.protectedDeparture.getProtectedDeparture(request),
   ]);
 
+  const checkedAtMs = readEvaluationClock();
+  if (!Number.isFinite(checkedAtMs)) {
+    throw new Error('Invalid checkedAtMs');
+  }
+
   if (planSnapshot.dataMode !== protectedDepartureSnapshot.dataMode) {
     throw new Error('Provider snapshots use different data modes');
   }
+
+  const providerIssues: JourneyReason[] = [
+    planSnapshot.failure,
+    protectedDepartureSnapshot.failure,
+  ]
+    .filter((failure) => failure !== undefined)
+    .map((failure) => ({ code: failure.code, message: failure.message }));
 
   return {
     request,
@@ -33,5 +44,6 @@ export async function buildJourneyAssessment(
       ...planSnapshot.evidence,
       ...protectedDepartureSnapshot.evidence,
     ],
+    providerIssues,
   };
 }

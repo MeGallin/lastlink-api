@@ -177,5 +177,6 @@ export function toFixtureAssessment(
     protectedEvent: fixture.protectedEvent,
     transferMinutes: fixture.transferMinutes,
     evidence: fixture.evidence,
+    providerIssues: [],
   };
 }

@@ -52,6 +52,11 @@ inside adapters. The current TypeScript boundary is:
 - Every snapshot carries `dataMode` and provenance `evidence`; raw provider
   payloads, credentials and provider-specific response shapes do not cross the
   boundary.
+- A snapshot may carry one normalized failure (`PROVIDER_UNAVAILABLE`,
+  `PROVIDER_RATE_LIMITED` or `ARRIVALS_EMPTY_UNKNOWN`) with a safe message and
+  no value. The composition passes these issues to the evaluator, which returns
+  `unable_to_verify` rather than treating an outage or empty response as a
+  successful or definitive no-service result.
 - `buildJourneyAssessment` combines the two snapshots into the evaluator input
   and rejects mixed data modes rather than silently combining live and cached
   evidence under one answer. A future reviewed policy may define an explicit
@@ -60,8 +65,9 @@ inside adapters. The current TypeScript boundary is:
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
-infrastructure, not live transport behaviour. Live TfL/Darwin adapters must add
-provider error mapping, request budgets, timestamp reconciliation and empirical
+infrastructure, not live transport behaviour. Live TfL/Darwin adapters must
+return these explicit failure outcomes, use an evaluation clock captured after
+retrieval, and add request budgets, timestamp reconciliation and empirical
 late-service validation before this route can be considered for a pilot.
 
 ## Request

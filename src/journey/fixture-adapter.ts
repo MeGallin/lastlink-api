@@ -48,7 +48,11 @@ const fixtureAdapters: JourneyProviderAdapters = {
 export async function createFixtureAssessment(
   request: ValidatedJourneyCheckRequest,
 ): Promise<JourneyAssessmentInput> {
-  return buildJourneyAssessment(request, fixtureCheckedAtMs, fixtureAdapters);
+  return buildJourneyAssessment(
+    request,
+    fixtureAdapters,
+    () => fixtureCheckedAtMs,
+  );
 }
 
 function findFixture(request: ValidatedJourneyCheckRequest) {

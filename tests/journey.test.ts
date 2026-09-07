@@ -473,8 +473,8 @@ await test('provider snapshots compose into the evaluator input', async () => {
   };
   const assessment = await buildJourneyAssessment(
     validation.value,
-    fixture.checkedAtMs,
     adapters,
+    () => fixture.checkedAtMs,
   );
   const result = evaluateJourneyCheck(assessment);
   assert.equal(result.status, 'viable');
@@ -508,7 +508,86 @@ await test('provider snapshots cannot mix data modes silently', async () => {
     },
   };
   await assert.rejects(
-    buildJourneyAssessment(validation.value, fixture.checkedAtMs, adapters),
+    buildJourneyAssessment(
+      validation.value,
+      adapters,
+      () => fixture.checkedAtMs,
+    ),
     /different data modes/,
   );
+});
+
+for (const failureCode of [
+  'PROVIDER_UNAVAILABLE',
+  'PROVIDER_RATE_LIMITED',
+  'ARRIVALS_EMPTY_UNKNOWN',
+] as const) {
+  await test(`provider failure ${failureCode} fails safe`, async () => {
+    const fixture = journeyFixtures[0];
+    if (fixture === undefined) throw new Error('Expected a fixture');
+    const validation = validateJourneyCheckRequest(fixture.request);
+    if (!validation.ok) throw new Error(validation.issues.join('; '));
+    const adapters: JourneyProviderAdapters = {
+      journeyPlanner: {
+        async getPlan() {
+          return {
+            dataMode: 'live',
+            value: null,
+            evidence: [],
+            failure: {
+              code: failureCode,
+              message: 'Safe normalized provider failure',
+            },
+          };
+        },
+      },
+      protectedDeparture: {
+        async getProtectedDeparture() {
+          return { dataMode: 'live', value: null, evidence: [] };
+        },
+      },
+    };
+    const assessment = await buildJourneyAssessment(
+      validation.value,
+      adapters,
+      () => fixture.checkedAtMs,
+    );
+    const result = evaluateJourneyCheck(assessment);
+    assert.equal(result.status, 'unable_to_verify');
+    assert.equal(result.reasons[0]?.code, failureCode);
+    assert.equal(result.liveJourneyVerified, false);
+  });
+}
+
+await test('evaluation clock is read after both provider snapshots resolve', async () => {
+  const fixture = journeyFixtures[0];
+  if (fixture === undefined) throw new Error('Expected a fixture');
+  const validation = validateJourneyCheckRequest(fixture.request);
+  if (!validation.ok) throw new Error(validation.issues.join('; '));
+  let resolvedSnapshots = 0;
+  const adapters: JourneyProviderAdapters = {
+    journeyPlanner: {
+      async getPlan() {
+        await Promise.resolve();
+        resolvedSnapshots += 1;
+        return { dataMode: 'fixture', value: null, evidence: [] };
+      },
+    },
+    protectedDeparture: {
+      async getProtectedDeparture() {
+        await Promise.resolve();
+        resolvedSnapshots += 1;
+        return { dataMode: 'fixture', value: null, evidence: [] };
+      },
+    },
+  };
+  const assessment = await buildJourneyAssessment(
+    validation.value,
+    adapters,
+    () => {
+      assert.equal(resolvedSnapshots, 2);
+      return fixture.checkedAtMs;
+    },
+  );
+  assert.equal(assessment.checkedAtMs, fixture.checkedAtMs);
 });

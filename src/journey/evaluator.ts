@@ -47,6 +47,16 @@ export function evaluateJourneyCheck(
     );
   }
 
+  const providerIssue = input.providerIssues[0];
+  if (providerIssue !== undefined) {
+    return response(
+      base,
+      'unable_to_verify',
+      providerIssue,
+      'The journey could not be verified because a required provider was unavailable.',
+    );
+  }
+
   const evidenceIssue = findEvidenceIssue(
     input.evidence,
     evidenceResult,

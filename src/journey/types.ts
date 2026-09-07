@@ -126,6 +126,7 @@ export interface JourneyAssessmentInput {
   protectedEvent: ProtectedEvent | null;
   transferMinutes: number;
   evidence: EvidenceRecord[];
+  providerIssues: JourneyReason[];
 }
 
 export interface JourneyEvaluationPolicy {
