@@ -4,6 +4,10 @@ This is the provider-neutral contract for the first real journey assessment
 increment. It is a design artifact, not an implemented endpoint. The existing
 `/api/v1/demo/*` routes remain synthetic examples and are intentionally unchanged.
 
+The internal validator/evaluator and labelled fixtures for this contract are now
+implemented under `src/journey/`. The public endpoint and provider adapters remain
+deferred; this increment does not claim live journey verification.
+
 The contract is designed around one question:
 
 > Can I reach the named destination in time for the protected departure, with the
@@ -267,8 +271,17 @@ cover this increase with a deterministic fixture test.
 
 `protectedEvent.matchStatus=matched` requires protected-event evidence (for
 example, a `darwin_service` item) as well as route, station and service-date
-reconciliation. A Journey Planner response alone cannot establish the identity or
-existence of the National Rail departure.
+reconciliation. The internal normalised protected-event input carries an explicit
+`serviceDateMatch` value (`matched`, `not_matched` or `ambiguous`) supplied by the
+adapter's reconciliation step. The evaluator must use that attestation rather
+than infer a provider operating service date by comparing calendar-date strings.
+A Journey Planner response alone cannot establish the identity or existence of the
+National Rail departure.
+
+Route-leg `durationMinutes` must agree with its explicit departure and arrival
+instants within a small documented ingestion tolerance; a contradiction is not a
+viable result. The evaluator also checks route endpoint identity, adjacent-leg
+continuity and whether the first leg is still catchable at `checkedAt`.
 
 ## Reason codes
 

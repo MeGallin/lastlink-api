@@ -16,7 +16,7 @@ The canonical project memory remains in the separate planning workspace, at outp
   for risky or isolated work, or when the Product Owner requests it; no force pushes.
 - Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
-- Current increment: provider-neutral journey-check contract documentation and the
-  main-first delivery policy (docs/journey-check-contract.md). The proposed endpoint
-  is not implemented; no live provider calls or new routes are authorised in this
-  increment. Preserve the owner's VS Code server on port 3000.
+- Current increment: provider-neutral journey-check validation/evaluation and
+  labelled fixtures under src/journey/. The public endpoint is not implemented;
+  no live provider calls or new routes are authorised in this increment. Preserve
+  the owner's VS Code server on port 3000.

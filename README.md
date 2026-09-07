@@ -53,9 +53,10 @@ Demo endpoints:
 See [the demo contract](docs/demo-contract.md) for request examples, validation
 and arithmetic rules. All results are synthetic and explicitly not travel advice.
 
-The next provider-neutral endpoint is specified in the [journey-check contract](docs/journey-check-contract.md),
-but is not implemented yet. Live TfL/Darwin calls remain deferred until that
-contract and its deterministic fixtures are reviewed.
+The provider-neutral [journey-check contract](docs/journey-check-contract.md) now
+has an internal strict validator, deterministic evaluator and labelled fixtures in
+`src/journey/`. The public endpoint is not implemented yet, and live TfL/Darwin
+calls remain deferred until the adapter boundary is reviewed.
 
 1. Start the API in one terminal.
 2. Import postman/lastlink-api.postman_collection.json into Postman.
@@ -76,6 +77,8 @@ Keep private environment exports out of Git (use the ignored *.local.json suffix
 - src/config.ts: environment validation.
 - src/server.ts: process startup and graceful shutdown.
 - src/demo/: fixture, pure margin calculation and HTTP routing/validation.
+- src/journey/: provider-neutral request validation, deterministic evaluation and
+  labelled fixture inputs; no provider or HTTP dependency.
 - tests/: automated HTTP and configuration tests.
 - postman/: collection and safe local environment template.
 
