@@ -2,7 +2,6 @@ import type {
   EvidenceRecord,
   JourneyDataMode,
   JourneyRoute,
-  ProtectedEvent,
   ValidatedJourneyCheckRequest,
 } from '../journey/types.js';
 
@@ -41,13 +40,6 @@ export interface JourneyPlannerAdapter {
   ): Promise<ProviderSnapshot<NormalizedJourneyPlan>>;
 }
 
-export interface ProtectedDepartureAdapter {
-  getProtectedDeparture(
-    request: ValidatedJourneyCheckRequest,
-  ): Promise<ProviderSnapshot<ProtectedEvent>>;
-}
-
 export interface JourneyProviderAdapters {
   journeyPlanner: JourneyPlannerAdapter;
-  protectedDeparture: ProtectedDepartureAdapter;
 }

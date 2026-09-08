@@ -16,7 +16,8 @@ The canonical project memory remains in the separate planning workspace, at outp
   for risky or isolated work, or when the Product Owner requests it; no force pushes.
 - Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
-- Current increment: define the provider-adapter contracts and normalized
-  assessment composition behind the fixture-only journey-check boundary, with
-  deterministic tests. No live provider calls or production passenger advice
-  are authorised in this increment. Preserve the owner's VS Code server on port 3000.
+- Current increment: implement and review the TfL-only v0.2 station-arrival
+  contract behind the fixture-only journey-check boundary, with deterministic
+  tests and no legacy demo/protected-departure path. No live provider calls or
+  production passenger advice are authorised in this increment. Preserve the
+  owner's VS Code server on port 3000.

@@ -1,5 +1,7 @@
 import type {
-  JourneyCheckRequestInput,
+  JourneyConstraintsInput,
+  JourneyDestinationInput,
+  JourneyLocationInput,
   JourneyRequestValidation,
   ValidatedJourneyCheckRequest,
 } from './types.js';
@@ -50,7 +52,7 @@ function readExplicitInstant(
   value: unknown,
   field: string,
   issues: string[],
-): { text: string; atMs: number; localServiceDate: string } | undefined {
+): { text: string; atMs: number } | undefined {
   if (typeof value !== 'string') {
     issues.push(
       `${field} must be an ISO-8601 timestamp with an explicit offset`,
@@ -86,7 +88,9 @@ export function validateJourneyCheckRequest(
     !hasOnlyKeys(value, [
       'origin',
       'destination',
-      'protectedDeparture',
+      'arriveBy',
+      'onwardDepartureAt',
+      'stationTransferMinutes',
       'safetyBufferMinutes',
       'constraints',
     ])
@@ -94,19 +98,13 @@ export function validateJourneyCheckRequest(
     issues.push('request contains an unknown field');
   }
 
-  const originValue = value.origin;
-  const origin = isRecord(originValue)
-    ? readOrigin(originValue, issues)
+  const origin = isRecord(value.origin)
+    ? readOrigin(value.origin, issues)
     : (issues.push('origin must be an object'), undefined);
-  const destinationValue = value.destination;
-  const destination = isRecord(destinationValue)
-    ? readDestination(destinationValue, issues)
+  const destination = isRecord(value.destination)
+    ? readDestination(value.destination, issues)
     : (issues.push('destination must be an object'), undefined);
-  const protectedDepartureValue = value.protectedDeparture;
-  const protectedDeparture = isRecord(protectedDepartureValue)
-    ? readProtectedDeparture(protectedDepartureValue, issues)
-    : (issues.push('protectedDeparture must be an object'), undefined);
-
+  const deadline = readDeadline(value, issues);
   const safetyBufferMinutes = readInteger(
     value.safetyBufferMinutes,
     'safetyBufferMinutes',
@@ -119,7 +117,7 @@ export function validateJourneyCheckRequest(
   if (
     origin === undefined ||
     destination === undefined ||
-    protectedDeparture === undefined ||
+    deadline === undefined ||
     safetyBufferMinutes === undefined ||
     constraints === undefined
   ) {
@@ -129,7 +127,7 @@ export function validateJourneyCheckRequest(
   const result: ValidatedJourneyCheckRequest = {
     origin,
     destination,
-    protectedDeparture,
+    deadline,
     safetyBufferMinutes,
     constraints,
   };
@@ -141,7 +139,7 @@ export function validateJourneyCheckRequest(
 function readOrigin(
   value: Record<string, unknown>,
   issues: string[],
-): JourneyCheckRequestInput['origin'] | undefined {
+): JourneyLocationInput | undefined {
   if (!hasOnlyKeys(value, ['name', 'tflStopPointId'])) {
     issues.push('origin contains an unknown field');
   }
@@ -168,8 +166,8 @@ function readOrigin(
 function readDestination(
   value: Record<string, unknown>,
   issues: string[],
-): JourneyCheckRequestInput['destination'] | undefined {
-  if (!hasOnlyKeys(value, ['name', 'nationalRailCrs'])) {
+): JourneyDestinationInput | undefined {
+  if (!hasOnlyKeys(value, ['name', 'tflStopPointId'])) {
     issues.push('destination contains an unknown field');
   }
   const name = readNonEmptyString(
@@ -178,68 +176,83 @@ function readDestination(
     MAX_NAME_LENGTH,
     issues,
   );
-  const nationalRailCrs = readOptionalString(
-    value.nationalRailCrs,
-    'destination.nationalRailCrs',
-    3,
+  const tflStopPointId = readOptionalIdentifier(
+    value.tflStopPointId,
+    'destination.tflStopPointId',
     issues,
   );
-  if (nationalRailCrs !== undefined && !/^[A-Z]{3}$/.test(nationalRailCrs)) {
-    issues.push('destination.nationalRailCrs must be three uppercase letters');
-  }
   if (
     name === undefined ||
-    (value.nationalRailCrs !== undefined &&
-      (nationalRailCrs === undefined || !/^[A-Z]{3}$/.test(nationalRailCrs)))
+    (value.tflStopPointId !== undefined && tflStopPointId === undefined)
   ) {
     return undefined;
   }
-  return nationalRailCrs === undefined ? { name } : { name, nationalRailCrs };
+  return tflStopPointId === undefined ? { name } : { name, tflStopPointId };
 }
 
-function readProtectedDeparture(
+function readDeadline(
   value: Record<string, unknown>,
   issues: string[],
-): ValidatedJourneyCheckRequest['protectedDeparture'] | undefined {
-  if (!hasOnlyKeys(value, ['at', 'kind', 'serviceLabel'])) {
-    issues.push('protectedDeparture contains an unknown field');
-  }
-  const instant = readExplicitInstant(
-    value.at,
-    'protectedDeparture.at',
-    issues,
-  );
-  if (value.kind !== 'national_rail_departure') {
-    issues.push('protectedDeparture.kind must be national_rail_departure');
-  }
-  const serviceLabel = readOptionalString(
-    value.serviceLabel,
-    'protectedDeparture.serviceLabel',
-    MAX_NAME_LENGTH,
-    issues,
-  );
-  if (
-    instant === undefined ||
-    value.kind !== 'national_rail_departure' ||
-    (value.serviceLabel !== undefined && serviceLabel === undefined)
-  ) {
+): ValidatedJourneyCheckRequest['deadline'] | undefined {
+  const hasDirectDeadline = value.arriveBy !== undefined;
+  const hasOnwardDeparture = value.onwardDepartureAt !== undefined;
+  const hasStationTransfer = value.stationTransferMinutes !== undefined;
+
+  if (hasDirectDeadline && hasOnwardDeparture) {
+    issues.push('provide arriveBy or onwardDepartureAt, not both');
     return undefined;
   }
-  const base = {
-    at: instant.text,
-    kind: 'national_rail_departure' as const,
-    atMs: instant.atMs,
-    localServiceDate: instant.localServiceDate,
+  if (!hasDirectDeadline && !hasOnwardDeparture) {
+    issues.push('provide arriveBy or onwardDepartureAt');
+    return undefined;
+  }
+  if (hasStationTransfer && !hasOnwardDeparture) {
+    issues.push('stationTransferMinutes is only valid with onwardDepartureAt');
+    return undefined;
+  }
+
+  const direct = hasDirectDeadline
+    ? readExplicitInstant(value.arriveBy, 'arriveBy', issues)
+    : undefined;
+  const onward = hasOnwardDeparture
+    ? readExplicitInstant(value.onwardDepartureAt, 'onwardDepartureAt', issues)
+    : undefined;
+  const stationTransferMinutes = hasOnwardDeparture
+    ? readInteger(
+        value.stationTransferMinutes,
+        'stationTransferMinutes',
+        0,
+        120,
+        issues,
+      )
+    : undefined;
+
+  if (direct !== undefined) {
+    return {
+      arriveBy: direct.text,
+      arriveByAtMs: direct.atMs,
+      source: 'user_input',
+    };
+  }
+  if (onward === undefined || stationTransferMinutes === undefined) {
+    return undefined;
+  }
+  const arriveByAtMs = onward.atMs - stationTransferMinutes * 60_000;
+  const arriveBy = new Date(arriveByAtMs).toISOString();
+  return {
+    arriveBy,
+    arriveByAtMs,
+    source: 'derived_from_onward_departure',
+    onwardDepartureAt: onward.text,
+    onwardDepartureAtMs: onward.atMs,
+    stationTransferMinutes,
   };
-  return serviceLabel === undefined ? base : { ...base, serviceLabel };
 }
 
 function readConstraints(
   value: unknown,
   issues: string[],
-):
-  | (JourneyCheckRequestInput['constraints'] & { stepFreeRequired: boolean })
-  | undefined {
+): (JourneyConstraintsInput & { stepFreeRequired: boolean }) | undefined {
   if (value === undefined) return { stepFreeRequired: false };
   if (!isRecord(value)) {
     issues.push('constraints must be an object');
@@ -276,7 +289,7 @@ function readConstraints(
   }
   const result = {
     stepFreeRequired: value.stepFreeRequired ?? false,
-  } as JourneyCheckRequestInput['constraints'] & { stepFreeRequired: boolean };
+  } as JourneyConstraintsInput & { stepFreeRequired: boolean };
   if (walkingMinutesLimit !== undefined) {
     result.walkingMinutesLimit = walkingMinutesLimit;
   }

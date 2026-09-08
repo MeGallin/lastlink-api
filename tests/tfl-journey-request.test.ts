@@ -10,11 +10,8 @@ function validatedRequest(
 ): ValidatedJourneyCheckRequest {
   const result = validateJourneyCheckRequest({
     origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
-    destination: { name: 'Waterloo', nationalRailCrs: 'WAT' },
-    protectedDeparture: {
-      at,
-      kind: 'national_rail_departure',
-    },
+    destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
+    arriveBy: at,
     safetyBufferMinutes: 5,
     constraints: {
       walkingMinutesLimit: 20,
@@ -33,7 +30,7 @@ await test('TfL journey request uses the official arriving-search shape', () => 
 
   assert.equal(
     result.url.origin + result.url.pathname,
-    'https://api.tfl.gov.uk/Journey/JourneyResults/940GZZLUSFD/to/Waterloo',
+    'https://api.tfl.gov.uk/Journey/JourneyResults/940GZZLUSFD/to/940GZZLUWLO',
   );
   assert.equal(result.url.searchParams.get('date'), '20260907');
   assert.equal(result.url.searchParams.get('time'), '0035');
@@ -55,7 +52,7 @@ await test('TfL journey request uses the official arriving-search shape', () => 
 await test('TfL journey request encodes free-text locations and omits optional filters', () => {
   const request = validatedRequest({
     origin: { name: "King's Cross / St Pancras" },
-    destination: { name: 'London Bridge', nationalRailCrs: 'LBG' },
+    destination: { name: 'London Bridge' },
     constraints: { stepFreeRequired: false },
   });
   const result = buildTflJourneyPlannerRequest(request, {

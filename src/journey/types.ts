@@ -1,18 +1,9 @@
-export const journeyContractVersion = 'journey-check.v0.1' as const;
+export const journeyContractVersion = 'journey-check.v0.2' as const;
 
 export type JourneyCheckStatus =
   'viable' | 'tight' | 'not_viable' | 'unable_to_verify';
 
 export type JourneyDataMode = 'fixture' | 'live' | 'cache';
-
-export type ProtectedDepartureKind = 'national_rail_departure';
-
-export type ProtectedEventMatchStatus =
-  'matched' | 'not_matched' | 'ambiguous' | 'unavailable';
-
-export type ProtectedEventStatus = 'scheduled' | 'cancelled' | 'disrupted';
-
-export type ProtectedServiceDateMatch = 'matched' | 'not_matched' | 'ambiguous';
 
 export type EvidenceSource =
   | 'tfl_journey_planner'
@@ -20,7 +11,7 @@ export type EvidenceSource =
   | 'tfl_arrivals'
   | 'tfl_line_status'
   | 'tfl_stop_point_disruption'
-  | 'darwin_service'
+  | 'tfl_stop_point_structure'
   | 'fixture';
 
 export type EvidenceKind =
@@ -29,7 +20,7 @@ export type EvidenceKind =
   | 'arrivals'
   | 'line_status'
   | 'stop_point_disruption'
-  | 'protected_event';
+  | 'stop_point_structure';
 
 export type EvidenceCompleteness = 'sufficient' | 'partial';
 
@@ -40,13 +31,20 @@ export interface JourneyLocationInput {
 
 export interface JourneyDestinationInput {
   name: string;
-  nationalRailCrs?: string;
+  tflStopPointId?: string;
 }
 
-export interface ProtectedDepartureInput {
-  at: string;
-  kind: ProtectedDepartureKind;
-  serviceLabel?: string;
+export type JourneyDeadlineSource =
+  'user_input' | 'derived_from_onward_departure';
+
+export interface JourneyCheckRequestInput {
+  origin: JourneyLocationInput;
+  destination: JourneyDestinationInput;
+  arriveBy?: string;
+  onwardDepartureAt?: string;
+  stationTransferMinutes?: number;
+  safetyBufferMinutes: number;
+  constraints?: JourneyConstraintsInput;
 }
 
 export interface JourneyConstraintsInput {
@@ -54,21 +52,19 @@ export interface JourneyConstraintsInput {
   stepFreeRequired?: boolean;
 }
 
-export interface JourneyCheckRequestInput {
-  origin: JourneyLocationInput;
-  destination: JourneyDestinationInput;
-  protectedDeparture: ProtectedDepartureInput;
-  safetyBufferMinutes: number;
-  constraints?: JourneyConstraintsInput;
+export interface ValidatedJourneyDeadline {
+  arriveBy: string;
+  arriveByAtMs: number;
+  source: JourneyDeadlineSource;
+  onwardDepartureAt?: string;
+  onwardDepartureAtMs?: number;
+  stationTransferMinutes?: number;
 }
 
 export interface ValidatedJourneyCheckRequest {
   origin: JourneyLocationInput;
   destination: JourneyDestinationInput;
-  protectedDeparture: ProtectedDepartureInput & {
-    atMs: number;
-    localServiceDate: string;
-  };
+  deadline: ValidatedJourneyDeadline;
   safetyBufferMinutes: number;
   constraints: JourneyConstraintsInput & { stepFreeRequired: boolean };
 }
@@ -97,18 +93,6 @@ export interface JourneyRoute {
   stepFreeAvailable?: boolean;
 }
 
-export interface ProtectedEvent {
-  kind: ProtectedDepartureKind;
-  at: string;
-  station: string;
-  serviceDate: string;
-  serviceDateMatch: ProtectedServiceDateMatch;
-  matchStatus: ProtectedEventMatchStatus;
-  status: ProtectedEventStatus;
-  serviceLabel?: string;
-  nationalRailCrs?: string;
-}
-
 export interface EvidenceRecord {
   source: EvidenceSource;
   kind: EvidenceKind;
@@ -123,7 +107,6 @@ export interface JourneyAssessmentInput {
   checkedAtMs: number;
   dataMode: JourneyDataMode;
   route: JourneyRoute | null;
-  protectedEvent: ProtectedEvent | null;
   transferMinutes: number;
   evidence: EvidenceRecord[];
   providerIssues: JourneyReason[];
@@ -137,11 +120,9 @@ export interface JourneyReason {
   code:
     | 'BUFFER_SATISFIED'
     | 'BUFFER_SHORTFALL'
-    | 'CONNECTION_MISSED'
+    | 'DEADLINE_MISSED'
     | 'NO_MATCHING_ROUTE'
-    | 'PROTECTED_EVENT_NOT_MATCHED'
-    | 'SERVICE_CANCELLED'
-    | 'SERVICE_DISRUPTED'
+    | 'STATION_NOT_REACHED'
     | 'ARRIVALS_EMPTY_UNKNOWN'
     | 'EVIDENCE_STALE'
     | 'EVIDENCE_INCOMPLETE'
@@ -157,20 +138,19 @@ export interface JourneyEvidenceResult extends EvidenceRecord {
   ageSeconds: number | null;
 }
 
+export interface JourneyDeadlineResult {
+  arriveBy: string;
+  source: JourneyDeadlineSource;
+  onwardDepartureAt: string | null;
+  stationTransferMinutes: number | null;
+}
+
 export interface JourneyMargin {
   arrivalAt: string;
   transferMinutes: number;
   safetyBufferMinutes: number;
   availableMinutes: number;
   remainingAfterBufferMinutes: number;
-}
-
-export interface JourneyProtectedEventResult {
-  kind: ProtectedDepartureKind;
-  at: string;
-  station: string;
-  matchStatus: ProtectedEventMatchStatus;
-  serviceLabel?: string;
 }
 
 export interface JourneyCheckResponse {
@@ -180,8 +160,9 @@ export interface JourneyCheckResponse {
   checkedAt: string;
   summary: string;
   nextAction: string;
-  liveJourneyVerified: boolean;
-  protectedEvent: JourneyProtectedEventResult | null;
+  stationOnly: true;
+  stationOnlyWarning: string;
+  deadline: JourneyDeadlineResult;
   margin: JourneyMargin | null;
   route: JourneyRoute | null;
   reasons: JourneyReason[];

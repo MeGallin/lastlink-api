@@ -7,7 +7,7 @@ import {
 import type { TflJourneyPlannerCandidate } from '../src/providers/tfl/journey-response.js';
 
 const rankingOptions: TflJourneyRankingOptions = {
-  protectedDepartureAtMs: Date.parse('2026-09-07T00:35:00+01:00'),
+  arriveByAtMs: Date.parse('2026-09-07T00:35:00+01:00'),
   transferMinutes: 10,
   safetyBufferMinutes: 5,
 };
@@ -93,8 +93,8 @@ await test('ranking requires an explicit transfer and safety policy', () => {
     message: string;
   }> = [
     {
-      options: { ...rankingOptions, protectedDepartureAtMs: Number.NaN },
-      message: 'protected departure instant must be finite',
+      options: { ...rankingOptions, arriveByAtMs: Number.NaN },
+      message: 'arrive-by instant must be finite',
     },
     {
       options: { ...rankingOptions, transferMinutes: -1 },

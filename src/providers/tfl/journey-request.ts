@@ -22,7 +22,7 @@ export function buildTflJourneyPlannerRequest(
   }
 
   const from = request.origin.tflStopPointId ?? request.origin.name;
-  const to = request.destination.name;
+  const to = request.destination.tflStopPointId ?? request.destination.name;
   const endpoint = new URL(options.baseUrl.toString());
   const pathPrefix = endpoint.pathname.replace(/\/+$/, '');
   endpoint.pathname = `${pathPrefix}/Journey/JourneyResults/${encodeURIComponent(from)}/to/${encodeURIComponent(to)}`;
@@ -71,20 +71,18 @@ function extractArrivalDateAndTime(request: ValidatedJourneyCheckRequest): {
   date: string;
   time: string;
 } {
-  if (!Number.isFinite(request.protectedDeparture.atMs)) {
-    throw new Error('protected departure instant must be finite');
+  if (!Number.isFinite(request.deadline.arriveByAtMs)) {
+    throw new Error('arrive-by instant must be finite');
   }
 
-  const local = formatLondonDateTime(request.protectedDeparture.atMs);
+  const local = formatLondonDateTime(request.deadline.arriveByAtMs);
   if (
     local ===
-      formatLondonDateTime(request.protectedDeparture.atMs - 60 * 60 * 1000) ||
+      formatLondonDateTime(request.deadline.arriveByAtMs - 60 * 60 * 1000) ||
     local ===
-      formatLondonDateTime(request.protectedDeparture.atMs + 60 * 60 * 1000)
+      formatLondonDateTime(request.deadline.arriveByAtMs + 60 * 60 * 1000)
   ) {
-    throw new Error(
-      'protected departure local time is ambiguous in Europe/London',
-    );
+    throw new Error('arrive-by local time is ambiguous in Europe/London');
   }
 
   const separator = local.indexOf('T');
@@ -124,7 +122,7 @@ function formatLondonDateTime(atMs: number): string {
     hour === undefined ||
     minute === undefined
   ) {
-    throw new Error('could not format protected departure in Europe/London');
+    throw new Error('could not format arrive-by time in Europe/London');
   }
   return `${year}-${month}-${day}T${hour}:${minute}`;
 }

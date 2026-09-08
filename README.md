@@ -1,11 +1,14 @@
 # LastLink API
 
-Minimal backend foundation for LastLink, a late-night journey viability application.
+LastLink is a late-night TfL journey-viability service. The active contract
+answers one bounded question: can a user reach a named TfL station by a stated
+deadline, with a requested safety margin?
 
-**Current scope:** process health, two explicitly fictional demo routes and a
-fixture-only journey-check boundary, with locally tested Docker packaging. No
-live TfL/Darwin integration, passenger-facing production assessment, database,
-AI or deployed service exists yet.
+The current implementation is a deterministic, fixture-backed backend slice.
+It intentionally does not call live providers, make onward-train claims, use
+Darwin/Rail Data Marketplace data, store credentials, use a database or use AI.
+TfL feasibility is strongly supported, but late-service edge cases still need
+empirical API validation before a live adapter is enabled.
 
 ## Run locally
 
@@ -16,20 +19,41 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000/health. It returns:
+Open http://localhost:3000/health. It returns process liveness only:
 
 ```json
 { "status": "ok", "service": "lastlink-api" }
 ```
 
-This is process liveness, not transport service status or a journey guarantee.
-Unknown paths and unsupported methods return a JSON 404.
+Configuration defaults to `PORT=3000` and `NODE_ENV=development`. Copy
+`.env.example` to an ignored `.env` only when a local provider key is needed.
+The Node process runs independently of Apache/XAMPP even when stored under
+`htdocs`.
 
-Configuration defaults to PORT=3000 and NODE_ENV=development. Optionally copy
-.env.example to .env and edit it locally. Invalid configuration stops startup.
-The Node process runs independently of Apache/XAMPP even when stored under htdocs.
+## Journey-check contract
 
-## Checks and production build
+`POST /api/v1/journey-check` accepts a direct `arriveBy` timestamp or derives a
+station deadline from `onwardDepartureAt` minus `stationTransferMinutes`. Both
+forms require an explicit ISO-8601 offset or `Z`.
+
+Example:
+
+```json
+{
+  "origin": { "name": "Stratford", "tflStopPointId": "940GZZLUSFD" },
+  "destination": { "name": "Waterloo", "tflStopPointId": "940GZZLUWLO" },
+  "arriveBy": "2026-09-07T00:25:00+01:00",
+  "safetyBufferMinutes": 5,
+  "constraints": { "walkingMinutesLimit": 20, "stepFreeRequired": false }
+}
+```
+
+Responses include `stationOnly: true`, the resolved deadline, route evidence,
+calculated margin and a conservative status (`viable`, `tight`, `not_viable` or
+`unable_to_verify`). They do not assert that an onward train is running or that
+the user will board it. See [the active TfL-only contract](docs/journey-check-contract-v0.2-tfl-only.md).
+
+## Checks and Postman
 
 ```sh
 npm run check
@@ -37,95 +61,40 @@ npm run build
 npm start
 ```
 
-Individual commands: npm run typecheck, npm run lint, npm run format:check,
-npm run format, npm test. Tests cover health, missing routes, unsupported methods,
-configuration defaults, demo input validation, margin arithmetic and boundaries.
+Individual commands include `npm run typecheck`, `npm run lint`,
+`npm run format:check`, `npm run format` and `npm test`.
 
-## Postman
-
-For the second checkpoint, import postman/demo-routes.postman_collection.json
-as a separate collection and reuse LastLink local. It contains eight requests
-covering health, scenario discovery, two buffer values and input/error handling.
-The original foundation collection remains unchanged.
-
-Demo endpoints:
-
-- GET /api/v1/demo/scenarios
-- POST /api/v1/demo/journey-check
-
-See [the demo contract](docs/demo-contract.md) for request examples, validation
-and arithmetic rules. All results are synthetic and explicitly not travel advice.
-
-The provider-neutral [journey-check contract](docs/journey-check-contract.md) now
-has a fixture-only `POST /api/v1/journey-check` boundary backed by the internal
-strict validator, deterministic evaluator and labelled fixtures. It is explicitly
-not live travel advice; live TfL/Darwin calls remain deferred until the adapter
-boundary is reviewed.
-
-For this controlled HTTP checkpoint, also import
-`postman/journey-check.postman_collection.json` and run it with LastLink local.
-The collection covers viable, tight, constraint-failure, unable-to-verify and
-invalid-input responses.
-
-1. Start the API in one terminal.
-2. Import postman/lastlink-api.postman_collection.json into Postman.
-3. Import postman/local.postman_environment.json and select LastLink local.
-4. Run the collection. Change baseUrl if using a different port.
-
-The collection was verified using Newman 6.2.2 against localhost during setup
-(3 requests, 7 passing assertions). Newman was then removed because its dependency
-tree reported security advisories. It is not installed by npm ci. Use Postman's
-collection runner for subsequent collection runs; selecting a maintained automated
-Postman runner remains an open tooling item. Automated HTTP tests remain available
-through npm test.
-Keep private environment exports out of Git (use the ignored *.local.json suffix).
+Import `postman/journey-check.postman_collection.json` into Postman and run it
+against `http://localhost:3000`. It covers viable, tight, derived-deadline,
+constraint-failure, unknown-station and invalid-input cases. Keep private
+environment exports out of Git.
 
 ## Layout
 
-- src/app.ts: Express setup, health, demo-router mounting and fallback.
-- src/config.ts: environment validation.
-- src/server.ts: process startup and graceful shutdown.
-- src/demo/: fixture, pure margin calculation and HTTP routing/validation.
-- src/journey/: provider-neutral request validation, deterministic evaluation and
-  labelled fixture inputs; no provider or HTTP dependency.
-- src/journey/assessment.ts: composition of normalized provider snapshots for the
-  evaluator.
-- src/providers/contracts.ts: narrow TfL/Darwin adapter contracts; raw provider
-  payloads stay inside future adapters.
-- src/routes/journey-check.ts: fixture-only HTTP boundary for the evaluator.
-- src/http/json-errors.ts: shared safe JSON parsing/error middleware.
-- tests/: automated HTTP and configuration tests.
-- postman/: collection and safe local environment template.
+- `src/app.ts`: Express setup, health route and journey-check route.
+- `src/journey/`: request validation, deterministic evaluation, fixture adapter
+  and labelled fixture inputs.
+- `src/providers/tfl/`: isolated TfL request, response and ranking seams.
+- `src/providers/contracts.ts`: narrow provider adapter contract.
+- `src/routes/journey-check.ts`: JSON HTTP boundary.
+- `tests/`: automated unit, contract, provider and HTTP tests.
+- `postman/`: safe local collection and environment template.
 
 ## Delivery workflow
 
-Work directly on `main` for ordinary small increments. A separate feature branch is
-optional for risky or isolated work, or when the Product Owner requests it. In either
-case, implement one bounded change, test it, obtain independent agent review, fix
-findings and re-review BEFORE committing. Verify the committed content matches the
-approved content BEFORE pushing. See [the mandatory review workflow](docs/code-review-workflow.md).
-Do not force-push shared history. Branch protection and local Git hooks are not
-configured; the independent review remains a mandatory agent workflow, not a
-Git-enforced or guaranteed defect-free certification. Human review remains
-valuable.
+Work directly on `main` for ordinary small increments. Implement one bounded
+change, leave it unstaged for Product Owner inspection, run the full check,
+obtain the independent read-only code review and only then commit or push when
+explicitly approved. See [the mandatory review workflow](docs/code-review-workflow.md).
+No live provider calls or credentials belong in tests.
 
-The demo and local Docker runtime checks are complete. A lightweight GitHub
-Actions check is configured to run `npm ci` and `npm run check` for pushes to
-`main` and pull requests. The first remote run passed with a Node 20 runtime
-warning; after updating the action runtimes, the second run also passed without
-that warning. CI does not call TfL/Darwin or replace the independent review
-gate.
-See
-[Docker instructions](docs/docker.md) for build/run commands and verification.
-Every commit/push still requires the independent review gate above.
-Use port 3001 for container testing so the owner's VS Code server stays on 3000.
-Render deployment and further application behaviour remain deferred.
+Use port 3001 for container testing so the owner's VS Code server can remain on
+port 3000. Render deployment and live TfL adapter work remain deferred until
+the provider-validation checkpoint is completed.
 
 ## Project context
 
-The separate planning workspace holds the canonical outputs/memory.md,
-outputs/00-project-register.md and TECH-02 v0.5. These private planning records
-are not copied to this public repository. Read AGENTS.md before agent-assisted work.
-
-Dependency versions are locked in package-lock.json. Node patch upgrades and
-dependency updates should be reviewed and tested before deployment.
+The separate planning workspace holds the canonical `outputs/memory.md`,
+`outputs/00-project-register.md` and product/technical documents. These private
+planning records are not copied to this public repository. Read `AGENTS.md`
+before agent-assisted work.

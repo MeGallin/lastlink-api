@@ -1,19 +1,19 @@
 {
   "info": {
-    "name": "LastLink journey-check fixture route",
+    "name": "LastLink TfL journey-check fixture route",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Internal fixture-only HTTP checks. Responses are synthetic and never travel advice; live TfL/Darwin calls are not used."
+    "description": "Internal TfL-only fixture checks. Responses are synthetic and never travel advice; no live provider calls are made."
   },
   "item": [
     {
-      "name": "Evaluate viable fixture",
+      "name": "Evaluate viable station arrival",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/api/v1/journey-check",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSFD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"nationalRailCrs\": \"WAT\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\", \"serviceLabel\": \"Fixture service\" },\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 20, \"stepFreeRequired\": false }\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSFD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 20, \"stepFreeRequired\": false }\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -24,7 +24,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('Fixture and not live', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.liveJourneyVerified).to.equal(false); pm.expect(b.warnings[0]).to.include('Fixture data only'); });",
+              "pm.test('Fixture station-only result', () => { const b=pm.response.json(); pm.expect(b.dataMode).to.equal('fixture'); pm.expect(b.stationOnly).to.equal(true); pm.expect(b.warnings[0]).to.include('Fixture data only'); });",
               "pm.test('Viable margin', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('viable'); pm.expect(b.margin.remainingAfterBufferMinutes).to.equal(13); });",
               "pm.test('No cache', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));"
             ]
@@ -33,14 +33,14 @@
       ]
     },
     {
-      "name": "Evaluate tight buffer",
+      "name": "Evaluate tight safety buffer",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/api/v1/journey-check",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\", \"nationalRailCrs\": \"WAT\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 20\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 20\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -58,6 +58,31 @@
       ]
     },
     {
+      "name": "Evaluate derived station deadline",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"onwardDepartureAt\": \"2026-09-07T00:35:00+01:00\",\n  \"stationTransferMinutes\": 10,\n  \"safetyBufferMinutes\": 5\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Derived deadline and station-only warning', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('viable'); pm.expect(b.deadline.source).to.equal('derived_from_onward_departure'); pm.expect(b.stationOnly).to.equal(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Reject route over walking limit",
       "request": {
         "method": "POST",
@@ -65,7 +90,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 10 }\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 10 }\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -83,14 +108,14 @@
       ]
     },
     {
-      "name": "Unknown fixture returns unable to verify",
+      "name": "Evaluate missed station deadline",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/api/v1/journey-check",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Victoria\", \"nationalRailCrs\": \"VIC\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00+01:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:20:00+01:00\",\n  \"safetyBufferMinutes\": 0\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -101,21 +126,46 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
-              "pm.test('Conservative result', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('unable_to_verify'); pm.expect(b.reasons[0].code).to.equal('EVIDENCE_INCOMPLETE'); pm.expect(b.protectedEvent).to.equal(null); });"
+              "pm.test('Missed deadline is not viable', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('not_viable'); pm.expect(b.reasons[0].code).to.equal('DEADLINE_MISSED'); });"
             ]
           }
         }
       ]
     },
     {
-      "name": "Reject invalid request",
+      "name": "Unknown station returns unable to verify",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/api/v1/journey-check",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"protectedDeparture\": { \"at\": \"2026-09-07T00:35:00\", \"kind\": \"national_rail_departure\" },\n  \"safetyBufferMinutes\": 5\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Victoria\", \"tflStopPointId\": \"940GZZLUVIC\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5\n}",
+          "options": { "raw": { "language": "json" } }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Conservative result', () => { const b=pm.response.json(); pm.expect(b.status).to.equal('unable_to_verify'); pm.expect(b.reasons[0].code).to.equal('EVIDENCE_INCOMPLETE'); pm.expect(b.route).to.equal(null); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject offset-free deadline",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00\",\n  \"safetyBufferMinutes\": 5\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -132,5 +182,6 @@
         }
       ]
     }
-  ]
+  ],
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:3000" }]
 }

@@ -10,7 +10,7 @@ const envExamplePath = resolve(
 );
 const envExample = await readFile(envExamplePath, 'utf8');
 const nonEmptyProviderAssignment =
-  /^[ \t]*(?!#)(?:export[ \t]+)?(?:TFL_[A-Z0-9_]+|DARWIN_[A-Z0-9_]+)[ \t]*=[ \t]*\S+/m;
+  /^[ \t]*(?!#)(?:export[ \t]+)?TFL_[A-Z0-9_]+[ \t]*=[ \t]*\S+/m;
 
 await test('environment example contains safe provider placeholders', () => {
   assert.equal(
@@ -40,7 +40,7 @@ await test('environment guard catches exported provider assignments', () => {
   for (const assignment of [
     'export TFL_APP_KEY=nonempty-value',
     '  export TFL_APP_KEY=nonempty-value',
-    '\texport\tDARWIN_TOKEN=nonempty-value',
+    '\texport\tTFL_APP_KEY=nonempty-value',
   ]) {
     assert.equal(
       nonEmptyProviderAssignment.test(assignment),

@@ -4,8 +4,6 @@ export const providerRequestOperations = [
   'arrivals',
   'lineStatus',
   'stopDisruption',
-  'darwinBoard',
-  'darwinServiceDetails',
 ] as const;
 
 export type ProviderRequestOperation =

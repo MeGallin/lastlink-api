@@ -2,7 +2,7 @@ import { parseExplicitInstant } from '../../journey/time.js';
 import type { TflJourneyPlannerCandidate } from './journey-response.js';
 
 export interface TflJourneyRankingOptions {
-  protectedDepartureAtMs: number;
+  arriveByAtMs: number;
   /** Supplied by a reviewed caller; this module never invents it. */
   transferMinutes: number;
   safetyBufferMinutes: number;
@@ -40,8 +40,8 @@ export function rankTflJourneyCandidates(
       message: 'No journey candidates were provided',
     };
   }
-  if (!Number.isFinite(options.protectedDepartureAtMs)) {
-    return invalidPolicy('protected departure instant must be finite');
+  if (!Number.isFinite(options.arriveByAtMs)) {
+    return invalidPolicy('arrive-by instant must be finite');
   }
   if (
     !Number.isInteger(options.transferMinutes) ||
@@ -73,8 +73,7 @@ export function rankTflJourneyCandidates(
       };
     }
     const availableMinutes =
-      (options.protectedDepartureAtMs - arrivalAtMs) / 60000 -
-      options.transferMinutes;
+      (options.arriveByAtMs - arrivalAtMs) / 60000 - options.transferMinutes;
     ranked.push({
       candidate,
       candidateIndex,

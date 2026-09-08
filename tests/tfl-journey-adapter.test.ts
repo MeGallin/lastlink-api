@@ -11,11 +11,8 @@ import type { ValidatedJourneyCheckRequest } from '../src/journey/types.js';
 function validatedRequest(): ValidatedJourneyCheckRequest {
   const result = validateJourneyCheckRequest({
     origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
-    destination: { name: 'Waterloo', nationalRailCrs: 'WAT' },
-    protectedDeparture: {
-      at: '2026-09-07T00:35:00+01:00',
-      kind: 'national_rail_departure',
-    },
+    destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
+    arriveBy: '2026-09-07T00:35:00+01:00',
     safetyBufferMinutes: 5,
     constraints: { walkingMinutesLimit: 20, stepFreeRequired: true },
   });

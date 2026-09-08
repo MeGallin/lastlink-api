@@ -1,5 +1,4 @@
 import express from 'express';
-import { createDemoRouter } from './demo/routes.js';
 import { createJourneyRouter } from './routes/journey-check.js';
 
 export function createApp() {
@@ -13,7 +12,6 @@ export function createApp() {
     response.json({ status: 'ok', service: 'lastlink-api' });
   });
 
-  app.use('/api/v1/demo', createDemoRouter());
   app.use('/api/v1/journey-check', createJourneyRouter());
 
   app.use((_request, response) => {

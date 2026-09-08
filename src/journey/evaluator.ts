@@ -6,13 +6,15 @@ import {
   type JourneyEvaluationPolicy,
   type JourneyReason,
   type JourneyRoute,
-  type ProtectedEvent,
 } from './types.js';
 import { parseExplicitInstant } from './time.js';
 
 export const defaultJourneyEvaluationPolicy: JourneyEvaluationPolicy = {
   maxEvidenceAgeSeconds: 120,
 };
+
+const stationOnlyWarning =
+  'This checks the TfL journey to the station only. It does not check whether an onward train is running or whether you will board it.';
 
 export function evaluateJourneyCheck(
   input: JourneyAssessmentInput,
@@ -27,15 +29,14 @@ export function evaluateJourneyCheck(
     contractVersion: journeyContractVersion,
     dataMode: input.dataMode,
     checkedAt,
-    liveJourneyVerified: false,
-    protectedEvent: markEventUnmatched(
-      toProtectedEventResult(input.protectedEvent),
-    ),
+    stationOnly: true as const,
+    stationOnlyWarning,
+    deadline: toDeadlineResult(input.request),
     route: null,
     margin: null,
     evidence: evidenceResult,
     warnings: input.dataMode === 'fixture' ? [fixtureWarning] : [],
-  } as const;
+  };
 
   const modeIssue = findModeIssue(input);
   if (modeIssue !== undefined) {
@@ -66,61 +67,26 @@ export function evaluateJourneyCheck(
       base,
       'unable_to_verify',
       evidenceIssue,
-      'The journey could not be verified from current evidence.',
-    );
-  }
-
-  const eventIssue = validateProtectedEvent(input.protectedEvent, input);
-  if (eventIssue !== undefined) {
-    return response(
-      { ...base, protectedEvent: markEventUnmatched(base.protectedEvent) },
-      'unable_to_verify',
-      eventIssue,
-      'The protected departure could not be matched safely.',
-    );
-  }
-
-  const verifiedBase = {
-    ...base,
-    protectedEvent: toProtectedEventResult(input.protectedEvent),
-  };
-
-  if (input.protectedEvent?.status === 'cancelled') {
-    return response(
-      verifiedBase,
-      'not_viable',
-      reason('SERVICE_CANCELLED', 'The protected departure is cancelled.'),
-      'The protected departure is cancelled.',
-    );
-  }
-  if (input.protectedEvent?.status === 'disrupted') {
-    return response(
-      verifiedBase,
-      'unable_to_verify',
-      reason(
-        'SERVICE_DISRUPTED',
-        'The protected departure is disrupted and needs a fresh check.',
-      ),
-      'The protected departure is disrupted.',
+      'The journey could not be verified from current TfL evidence.',
     );
   }
 
   if (input.route === null) {
     return response(
-      verifiedBase,
+      base,
       'not_viable',
       reason(
         'NO_MATCHING_ROUTE',
-        'No evaluated route reaches the protected departure.',
+        'No evaluated TfL route reaches the requested station.',
       ),
-      'No matching route is currently available.',
+      'No matching TfL route is currently available.',
     );
   }
 
   const routeIssue = validateRoute(input.route, input);
   if (routeIssue !== undefined) {
     return response(
-      verifiedBase,
+      base,
       'unable_to_verify',
       routeIssue,
       'The route evidence is incomplete or ambiguous.',
@@ -134,7 +100,7 @@ export function evaluateJourneyCheck(
         ? 'not_viable'
         : 'unable_to_verify';
     return response(
-      verifiedBase,
+      base,
       status,
       constraintIssue,
       status === 'not_viable'
@@ -150,9 +116,9 @@ export function evaluateJourneyCheck(
   const firstDepartureMs = parseExplicitInstant(firstLeg.departureAt)?.atMs;
   if (firstDepartureMs === undefined || firstDepartureMs < input.checkedAtMs) {
     return response(
-      verifiedBase,
+      base,
       'not_viable',
-      reason('CONNECTION_MISSED', 'The first route leg has already departed.'),
+      reason('DEADLINE_MISSED', 'The first route leg has already departed.'),
       'This route has already departed and cannot be caught from the origin now.',
     );
   }
@@ -162,7 +128,7 @@ export function evaluateJourneyCheck(
     throw new Error('Validated route has no arrival instant');
   }
   const availableMinutes =
-    (input.request.protectedDeparture.atMs - arrivalMs) / 60000 -
+    (input.request.deadline.arriveByAtMs - arrivalMs) / 60000 -
     input.transferMinutes;
   const remainingAfterBufferMinutes =
     availableMinutes - input.request.safetyBufferMinutes;
@@ -177,34 +143,34 @@ export function evaluateJourneyCheck(
 
   if (availableMinutes <= 0) {
     return response(
-      { ...verifiedBase, route, margin },
+      { ...base, route, margin },
       'not_viable',
       reason(
-        'CONNECTION_MISSED',
-        'The route arrives too late after the transfer allowance.',
+        'DEADLINE_MISSED',
+        'The route arrives after the station-arrival deadline.',
       ),
-      'This route does not reach the protected departure in time.',
+      'This route does not reach the station in time.',
     );
   }
   if (remainingAfterBufferMinutes < 0) {
     return response(
-      { ...verifiedBase, route, margin },
+      { ...base, route, margin },
       'tight',
       reason(
         'BUFFER_SHORTFALL',
-        'The route has positive time remaining but misses the requested safety buffer.',
+        'The route reaches the station but misses the requested safety buffer.',
       ),
       `The route is tight and misses your ${input.request.safetyBufferMinutes}-minute safety buffer.`,
     );
   }
   return response(
-    { ...verifiedBase, route, margin },
+    { ...base, route, margin },
     'viable',
     reason(
       'BUFFER_SATISFIED',
-      'The calculated margin meets the requested buffer.',
+      'The calculated station-arrival margin meets the requested buffer.',
     ),
-    `A route is currently shown with ${remainingAfterBufferMinutes} minutes remaining after your safety buffer.`,
+    `A TfL route is currently shown to reach the station with ${remainingAfterBufferMinutes} minutes remaining after your safety buffer.`,
   );
 }
 
@@ -300,68 +266,10 @@ function findEvidenceIssue(
     (item) =>
       item.kind === 'journey_plan' && item.completeness === 'sufficient',
   );
-  const hasProtectedEvent = input.some(
-    (item) =>
-      item.kind === 'protected_event' &&
-      (item.source === 'fixture' || item.source === 'darwin_service') &&
-      item.completeness === 'sufficient',
-  );
-  if (!hasJourneyPlan || !hasProtectedEvent) {
+  if (!hasJourneyPlan) {
     return reason(
       'EVIDENCE_INCOMPLETE',
-      'Journey-plan and protected-event evidence are both required.',
-    );
-  }
-  return undefined;
-}
-
-function validateProtectedEvent(
-  event: ProtectedEvent | null,
-  input: JourneyAssessmentInput,
-): JourneyReason | undefined {
-  if (event === null || event.matchStatus !== 'matched') {
-    return reason(
-      'PROTECTED_EVENT_NOT_MATCHED',
-      'The protected departure was not explicitly matched.',
-    );
-  }
-  if (event.kind !== input.request.protectedDeparture.kind) {
-    return reason(
-      'PROTECTED_EVENT_NOT_MATCHED',
-      'The protected departure kind did not match the request.',
-    );
-  }
-  if (event.serviceDateMatch !== 'matched') {
-    return reason(
-      event.serviceDateMatch === 'ambiguous'
-        ? 'TIME_AMBIGUOUS'
-        : 'PROTECTED_EVENT_NOT_MATCHED',
-      'The provider service date was not explicitly reconciled with the request.',
-    );
-  }
-  const eventAtMs = parseExplicitInstant(event.at)?.atMs;
-  if (
-    eventAtMs === undefined ||
-    eventAtMs !== input.request.protectedDeparture.atMs
-  ) {
-    return reason(
-      'TIME_AMBIGUOUS',
-      'The protected departure time could not be reconciled.',
-    );
-  }
-  if (
-    input.request.destination.nationalRailCrs !== undefined &&
-    event.nationalRailCrs !== input.request.destination.nationalRailCrs
-  ) {
-    return reason(
-      'PROTECTED_EVENT_NOT_MATCHED',
-      'The protected departure station did not match the requested CRS.',
-    );
-  }
-  if (!sameStation(event.station, input.request.destination.name)) {
-    return reason(
-      'PROTECTED_EVENT_NOT_MATCHED',
-      'The protected departure station did not match the destination.',
+      'Journey-plan evidence is required to assess the station arrival.',
     );
   }
   return undefined;
@@ -448,8 +356,8 @@ function validateRoute(
     !sameStation(finalLeg.to, input.request.destination.name)
   ) {
     return reason(
-      'EVIDENCE_CONTRADICTORY',
-      'The route endpoints do not match the requested origin and destination.',
+      'STATION_NOT_REACHED',
+      'The route endpoints do not match the requested TfL stations.',
     );
   }
   if (
@@ -499,26 +407,15 @@ function evaluateConstraints(
   return undefined;
 }
 
-function toProtectedEventResult(
-  event: ProtectedEvent | null,
-): JourneyCheckResponse['protectedEvent'] {
-  if (event === null) return null;
-  const result: JourneyCheckResponse['protectedEvent'] = {
-    kind: event.kind,
-    at: event.at,
-    station: event.station,
-    matchStatus: event.matchStatus,
+function toDeadlineResult(
+  request: JourneyAssessmentInput['request'],
+): JourneyCheckResponse['deadline'] {
+  return {
+    arriveBy: request.deadline.arriveBy,
+    source: request.deadline.source,
+    onwardDepartureAt: request.deadline.onwardDepartureAt ?? null,
+    stationTransferMinutes: request.deadline.stationTransferMinutes ?? null,
   };
-  if (event.serviceLabel !== undefined)
-    result.serviceLabel = event.serviceLabel;
-  return result;
-}
-
-function markEventUnmatched(
-  event: JourneyCheckResponse['protectedEvent'],
-): JourneyCheckResponse['protectedEvent'] {
-  if (event === null) return null;
-  return { ...event, matchStatus: 'not_matched' };
 }
 
 function response(
@@ -533,32 +430,26 @@ function response(
   reasonValue: JourneyReason | JourneyReason[],
   summary: string,
 ): JourneyCheckResponse {
-  const liveJourneyVerified =
-    base.dataMode === 'live' &&
-    status !== 'unable_to_verify' &&
-    base.evidence.length > 0 &&
-    base.evidence.every((item) => item.source !== 'fixture');
   return {
     ...base,
     status,
-    liveJourneyVerified,
     summary,
     nextAction:
       status === 'viable'
-        ? 'Leave now and follow the evaluated route.'
-        : 'Recheck for another route or allow more time.',
+        ? 'Leave now and follow the evaluated TfL route.'
+        : 'Recheck for another TfL route or allow more time.',
     reasons: Array.isArray(reasonValue) ? reasonValue : [reasonValue],
   };
 }
 
 function providerIssueSummary(issues: JourneyReason[]): string {
   if (issues.some((issue) => issue.code === 'ARRIVALS_EMPTY_UNKNOWN')) {
-    return 'Live arrivals were empty, so the service could not be verified.';
+    return 'Live TfL arrivals were empty, so the route could not be verified.';
   }
   if (issues.some((issue) => issue.code === 'PROVIDER_RATE_LIMITED')) {
-    return 'The live transport provider rate-limited this check.';
+    return 'TfL rate-limited this journey check.';
   }
-  return 'A required live transport provider was unavailable.';
+  return 'A required TfL provider was unavailable.';
 }
 
 function reason(code: JourneyReason['code'], message: string): JourneyReason {

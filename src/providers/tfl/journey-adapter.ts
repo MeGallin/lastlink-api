@@ -76,7 +76,7 @@ export function createTflJourneyPlannerAdapter(
       }
 
       const ranked = rankTflJourneyCandidates(normalized.value.candidates, {
-        protectedDepartureAtMs: request.protectedDeparture.atMs,
+        arriveByAtMs: request.deadline.arriveByAtMs,
         transferMinutes: options.transferMinutes,
         safetyBufferMinutes: request.safetyBufferMinutes,
       });

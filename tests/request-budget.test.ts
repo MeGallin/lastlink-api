@@ -11,8 +11,6 @@ const limits: ProviderRequestLimits = {
   arrivals: 2,
   lineStatus: 1,
   stopDisruption: 1,
-  darwinBoard: 1,
-  darwinServiceDetails: 1,
 };
 
 await test('request budget reserves distinct operations independently', () => {
@@ -23,13 +21,7 @@ await test('request budget reserves distinct operations independently', () => {
     deduplicated: false,
     usage: 1,
   });
-  assert.deepEqual(budget.reserve('darwinBoard', 'board-1'), {
-    allowed: true,
-    deduplicated: false,
-    usage: 1,
-  });
   assert.equal(budget.usage('journeyPlanner'), 1);
-  assert.equal(budget.usage('darwinBoard'), 1);
 });
 
 await test('identical request keys are deduplicated without consuming budget', () => {

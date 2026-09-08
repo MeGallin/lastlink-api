@@ -8,7 +8,6 @@ import type {
 import type {
   JourneyPlannerAdapter,
   JourneyProviderAdapters,
-  ProtectedDepartureAdapter,
   ProviderSnapshot,
 } from '../providers/contracts.js';
 import { parseExplicitInstant } from './time.js';
@@ -19,30 +18,19 @@ const fixtureJourneyPlannerAdapter: JourneyPlannerAdapter = {
   async getPlan(request) {
     const fixture = findFixture(request);
     return fixtureSnapshot(
-      fixture?.route === undefined
+      fixture === undefined
         ? null
         : {
             route: fixture.route,
             transferMinutes: fixture.transferMinutes,
           },
-      fixture?.evidence.filter((item) => item.kind === 'journey_plan') ?? [],
-    );
-  },
-};
-
-const fixtureProtectedDepartureAdapter: ProtectedDepartureAdapter = {
-  async getProtectedDeparture(request) {
-    const fixture = findFixture(request);
-    return fixtureSnapshot(
-      fixture?.protectedEvent ?? null,
-      fixture?.evidence.filter((item) => item.kind === 'protected_event') ?? [],
+      fixture?.evidence ?? [],
     );
   },
 };
 
 const fixtureAdapters: JourneyProviderAdapters = {
   journeyPlanner: fixtureJourneyPlannerAdapter,
-  protectedDeparture: fixtureProtectedDepartureAdapter,
 };
 
 export async function createFixtureAssessment(
@@ -72,24 +60,36 @@ function matchesFixtureRequest(
   fixtureRequest: JourneyCheckRequestInput,
   request: ValidatedJourneyCheckRequest,
 ): boolean {
-  const fixtureDeparture = parseExplicitInstant(
-    fixtureRequest.protectedDeparture.at,
-  );
+  const fixtureDeadline = resolveFixtureDeadline(fixtureRequest);
   return (
     sameText(fixtureRequest.origin.name, request.origin.name) &&
     sameText(fixtureRequest.destination.name, request.destination.name) &&
-    fixtureRequest.protectedDeparture.kind ===
-      request.protectedDeparture.kind &&
-    fixtureDeparture?.atMs === request.protectedDeparture.atMs &&
+    fixtureDeadline === request.deadline.arriveByAtMs &&
     optionalMatches(
       fixtureRequest.origin.tflStopPointId,
       request.origin.tflStopPointId,
     ) &&
     optionalMatches(
-      fixtureRequest.destination.nationalRailCrs,
-      request.destination.nationalRailCrs,
+      fixtureRequest.destination.tflStopPointId,
+      request.destination.tflStopPointId,
     )
   );
+}
+
+function resolveFixtureDeadline(request: JourneyCheckRequestInput): number {
+  if (request.arriveBy !== undefined) {
+    return parseExplicitInstant(request.arriveBy)?.atMs ?? Number.NaN;
+  }
+  if (
+    request.onwardDepartureAt !== undefined &&
+    request.stationTransferMinutes !== undefined
+  ) {
+    const onward = parseExplicitInstant(request.onwardDepartureAt)?.atMs;
+    return onward === undefined
+      ? Number.NaN
+      : onward - request.stationTransferMinutes * 60_000;
+  }
+  return Number.NaN;
 }
 
 function optionalMatches(

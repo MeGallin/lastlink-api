@@ -1,7 +1,6 @@
 export interface ParsedInstant {
   text: string;
   atMs: number;
-  localServiceDate: string;
 }
 
 const instantPattern =
@@ -13,14 +12,12 @@ export function parseExplicitInstant(
   if (typeof value !== 'string') return undefined;
   const match = instantPattern.exec(value);
   if (match === null) return undefined;
-  const localServiceDate = match[1];
-  if (localServiceDate === undefined || !isCalendarDate(localServiceDate)) {
+  const calendarDate = match[1];
+  if (calendarDate === undefined || !isCalendarDate(calendarDate)) {
     return undefined;
   }
   const atMs = Date.parse(value);
-  return Number.isFinite(atMs)
-    ? { text: value, atMs, localServiceDate }
-    : undefined;
+  return Number.isFinite(atMs) ? { text: value, atMs } : undefined;
 }
 
 function isCalendarDate(value: string): boolean {

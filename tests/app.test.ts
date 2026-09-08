@@ -26,12 +26,8 @@ await test('unsupported health method does not report success', async () => {
 
 const journeyRequest = {
   origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
-  destination: { name: 'Waterloo', nationalRailCrs: 'WAT' },
-  protectedDeparture: {
-    at: '2026-09-07T00:35:00+01:00',
-    kind: 'national_rail_departure',
-    serviceLabel: 'Fixture service',
-  },
+  destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
+  arriveBy: '2026-09-07T00:25:00+01:00',
   safetyBufferMinutes: 5,
   constraints: { walkingMinutesLimit: 20, stepFreeRequired: false },
 };
@@ -44,9 +40,10 @@ await test('journey-check evaluates the labelled fixture without claiming live d
     .expect('Content-Type', /json/);
   assert.equal(response.body.status, 'viable');
   assert.equal(response.body.dataMode, 'fixture');
-  assert.equal(response.body.liveJourneyVerified, false);
+  assert.equal(response.body.stationOnly, true);
+  assert.match(response.body.stationOnlyWarning, /station only/);
   assert.equal(response.body.margin.remainingAfterBufferMinutes, 13);
-  assert.equal(response.body.protectedEvent.matchStatus, 'matched');
+  assert.equal(response.body.deadline.source, 'user_input');
   assert.match(response.body.warnings[0], /Fixture data only/);
   assert.equal(response.headers['cache-control'], 'no-store');
 });
@@ -75,12 +72,11 @@ await test('journey-check returns a conservative result when no fixture matches'
     .post('/api/v1/journey-check')
     .send({
       ...journeyRequest,
-      destination: { name: 'Victoria', nationalRailCrs: 'VIC' },
+      destination: { name: 'Victoria', tflStopPointId: '940GZZLUVIC' },
     })
     .expect(200);
   assert.equal(response.body.status, 'unable_to_verify');
   assert.equal(response.body.reasons[0].code, 'EVIDENCE_INCOMPLETE');
-  assert.equal(response.body.protectedEvent, null);
   assert.equal(response.body.route, null);
 });
 
