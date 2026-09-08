@@ -112,6 +112,19 @@ status. It has no default transfer allowance; a caller must provide that policy
 explicitly. The ordering is provisional until station-transfer evidence and
 live-provider behaviour are validated.
 
+The current TfL adapter composition uses an injected provider HTTP client and
+the explicit transfer policy supplied by its caller. It builds the request,
+normalizes the response, ranks the candidates and returns the top candidate to
+the existing `JourneyPlannerAdapter` seam; transport failures and malformed
+payloads remain conservative provider failures, while an empty journey list
+returns a partial snapshot with no route. Before selection, the composition
+removes candidates whose first leg has already departed at capture time or
+whose normalized walking duration exceeds the caller's walking limit; if none
+remain it returns no route rather than selecting an unusable alternative. This
+composition is covered with synthetic payloads only. It is not wired into the
+live HTTP route, request budget, cache, evidence-freshness policy or
+passenger-facing response.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
