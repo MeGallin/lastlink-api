@@ -73,6 +73,14 @@ provider payloads. It is not yet wired into the fixture-only HTTP route; the
 actual limits remain a reviewed application policy after the owner's TfL and
 RDM products are confirmed.
 
+The credential-neutral `src/providers/http-client.ts` wrapper provides the
+future adapters with timeout-aware JSON GETs and conservative mappings for
+rate limits, non-success responses, network failures, timeouts and unusable
+payloads. It never returns raw upstream errors and does not validate provider
+schemas; each adapter must still normalize and validate its own response. It is
+also not wired into the fixture-only route until the actual provider products
+and endpoint contracts are empirically confirmed.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
