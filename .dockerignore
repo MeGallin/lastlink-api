@@ -4,6 +4,7 @@
 !.dockerignore
 !package.json
 !package-lock.json
+!.env.example
 !tsconfig.json
 !tsconfig.build.json
 !eslint.config.mjs

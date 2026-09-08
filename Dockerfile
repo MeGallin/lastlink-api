@@ -6,6 +6,7 @@ FROM base AS build
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY tsconfig.json tsconfig.build.json eslint.config.mjs .prettierrc.json .prettierignore ./
+COPY .env.example ./
 COPY src ./src
 COPY tests ./tests
 RUN npm run check

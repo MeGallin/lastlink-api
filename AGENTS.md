@@ -20,9 +20,10 @@ The canonical project memory remains in the separate planning workspace, at outp
   for risky or isolated work, or when the Product Owner requests it; no force pushes.
 - Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
-- Current increment: conservative TfL station endpoint identity matching. Only
-  generic trailing provider descriptors are normalized; arbitrary fuzzy or
-  substring matching is not allowed. Fixture remains default. No Darwin,
-  frontend, database or public deployment. Preserve the owner's VS Code server
-  and private .env; leave files unstaged for owner review. Live integration is
-  not validated passenger advice.
+- Current increment: Docker packaging verification. The build context includes
+  only the safe tracked `.env.example` placeholder so the build-stage safety
+  test can run; private `.env` remains excluded and is never copied into the
+  runtime image. Fixture remains default. No Darwin, frontend, database or
+  public deployment. Preserve the owner's VS Code server and private .env;
+  leave files unstaged for owner review. Live integration is not validated
+  passenger advice.
