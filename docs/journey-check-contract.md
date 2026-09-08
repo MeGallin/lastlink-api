@@ -104,6 +104,14 @@ call TfL or establish that a journey is viable. A parsed itinerary reports
 station-transfer or boarding allowance. That allowance remains unresolved until
 composition applies an explicitly reviewed policy.
 
+The current provider-neutral ranking helper accepts the protected-departure
+instant, a caller-supplied transfer allowance and the requested safety buffer.
+It ranks all candidates by `viable`, `tight` and missed-margin buckets, then by
+remaining margin, without deleting late candidates or declaring the final API
+status. It has no default transfer allowance; a caller must provide that policy
+explicitly. The ordering is provisional until station-transfer evidence and
+live-provider behaviour are validated.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
