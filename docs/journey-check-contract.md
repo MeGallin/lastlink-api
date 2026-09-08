@@ -63,6 +63,16 @@ inside adapters. The current TypeScript boundary is:
   evidence under one answer. A future reviewed policy may define an explicit
   mixed-mode rule.
 
+The credential-free `src/providers/request-budget.ts` utility provides the
+per-evaluation reservation primitive for the future live adapters. It keeps
+operation budgets separate, deduplicates identical internal request keys and
+counts a retry only when the caller supplies a distinct key. A deduplicated
+reservation reuses the existing result and must not dispatch another network
+request. Keys must never contain credentials, secret-bearing URLs or raw
+provider payloads. It is not yet wired into the fixture-only HTTP route; the
+actual limits remain a reviewed application policy after the owner's TfL and
+RDM products are confirmed.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
