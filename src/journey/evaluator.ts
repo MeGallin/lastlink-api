@@ -35,7 +35,14 @@ export function evaluateJourneyCheck(
     route: null,
     margin: null,
     evidence: evidenceResult,
-    warnings: input.dataMode === 'fixture' ? [fixtureWarning] : [],
+    warnings:
+      input.dataMode === 'fixture'
+        ? [fixtureWarning]
+        : input.dataMode === 'live'
+          ? [
+              'Internal validation only: Journey Planner evidence has not been corroborated with timetable, arrivals or disruption checks. Do not rely on this prototype for travel.',
+            ]
+          : [],
   };
 
   const modeIssue = findModeIssue(input);

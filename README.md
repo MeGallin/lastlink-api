@@ -4,11 +4,11 @@ LastLink is a late-night TfL journey-viability service. The active contract
 answers one bounded question: can a user reach a named TfL station by a stated
 deadline, with a requested safety margin?
 
-The current implementation is a deterministic, fixture-backed backend slice.
-It intentionally does not call live providers, make onward-train claims, use
-Darwin/Rail Data Marketplace data, store credentials, use a database or use AI.
+The backend defaults to deterministic fixtures. Explicit live mode connects
+TfL Journey Planner for internal validation only. It does not verify onward
+trains, use Darwin/Rail Data Marketplace, a database or AI.
 TfL feasibility is strongly supported, but late-service edge cases still need
-empirical API validation before a live adapter is enabled.
+empirical API validation before passenger use.
 
 ## Run locally
 
@@ -30,6 +30,28 @@ Configuration defaults to `PORT=3000` and `NODE_ENV=development`. Copy
 The Node process runs independently of Apache/XAMPP even when stored under
 `htdocs`.
 
+### Optional live validation
+
+Keep `JOURNEY_DATA_MODE=fixture` for the existing Postman regression collection.
+To run a separately supervised live check, set `JOURNEY_DATA_MODE=live` and
+`TFL_APP_KEY` in your ignored local `.env`, then restart your VS Code process.
+Never put the key in Postman, a request body, screenshots or Git. Live startup
+fails if the key is missing or contains whitespace; fixture mode ignores it.
+
+Each evaluation permits one Journey Planner request, with a five-second transport
+timeout and no retries or fixture fallback. Budgets are per evaluation, not an
+account-wide quota or spend cap. Do not expose this unauthenticated prototype
+publicly. Provider failures produce a labelled live `unable_to_verify` response.
+No extra transfer allowance is subtracted: a derived deadline already includes
+the user's station-transfer allowance.
+
+Only Journey Planner is connected. Timetable, arrivals and disruption
+cross-checks remain deferred. Offset-free provider timestamps, ambiguous London
+query times and station-name mismatches remain conservative validation limits.
+See `postman/live-journey-check.postman_collection.json` for a single manual
+smoke request; set its explicit-offset `arriveBy` variable to a future time.
+Do not run the fixture collection in live mode.
+
 ## Journey-check contract
 
 `POST /api/v1/journey-check` accepts a direct `arriveBy` timestamp or derives a
@@ -40,7 +62,7 @@ Example:
 
 ```json
 {
-  "origin": { "name": "Stratford", "tflStopPointId": "940GZZLUSFD" },
+  "origin": { "name": "Stratford", "tflStopPointId": "940GZZLUSTD" },
   "destination": { "name": "Waterloo", "tflStopPointId": "940GZZLUWLO" },
   "arriveBy": "2026-09-07T00:25:00+01:00",
   "safetyBufferMinutes": 5,
@@ -89,8 +111,7 @@ explicitly approved. See [the mandatory review workflow](docs/code-review-workfl
 No live provider calls or credentials belong in tests.
 
 Use port 3001 for container testing so the owner's VS Code server can remain on
-port 3000. Render deployment and live TfL adapter work remain deferred until
-the provider-validation checkpoint is completed.
+port 3000. Render deployment remains deferred until provider validation.
 
 ## Project context
 

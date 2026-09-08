@@ -28,8 +28,10 @@ Rail integration.
 
 The endpoint accepts JSON, rejects unknown fields, returns `Cache-Control:
 no-store`, and uses the existing `{ error: { code, message } }` input-error
-envelope. The current route remains fixture-only until a separately reviewed
-live TfL adapter is wired.
+envelope. The route defaults to fixture mode. Explicit server-side live
+configuration uses TfL Journey Planner only, with one request per evaluation,
+no retries and no fixture fallback. Live mode remains internal validation:
+timetable, arrivals and disruption corroboration are not yet connected.
 
 ## Request
 
@@ -39,7 +41,7 @@ The direct form is canonical:
 {
   "origin": {
     "name": "Stratford",
-    "tflStopPointId": "940GZZLUSFD"
+    "tflStopPointId": "940GZZLUSTD"
   },
   "destination": {
     "name": "Waterloo",

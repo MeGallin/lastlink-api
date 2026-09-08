@@ -2,9 +2,12 @@ import { json, Router } from 'express';
 import { createJsonErrorHandler, requireJson } from '../http/json-errors.js';
 import { evaluateJourneyCheck } from '../journey/evaluator.js';
 import { createFixtureAssessment } from '../journey/fixture-adapter.js';
+import type { AssessmentService } from '../journey/assessment-service.js';
 import { validateJourneyCheckRequest } from '../journey/validation.js';
 
-export function createJourneyRouter(): Router {
+export function createJourneyRouter(
+  assess: AssessmentService = createFixtureAssessment,
+): Router {
   const router = Router();
   router.use((_request, response, next) => {
     response.set('Cache-Control', 'no-store');
@@ -26,7 +29,7 @@ export function createJourneyRouter(): Router {
         });
         return;
       }
-      const assessment = await createFixtureAssessment(validation.value);
+      const assessment = await assess(validation.value);
       response.json(evaluateJourneyCheck(assessment));
     },
   );

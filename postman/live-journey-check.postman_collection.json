@@ -1,0 +1,59 @@
+{
+  "info": {
+    "name": "LastLink live TfL manual smoke",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "One internal live request. Set arriveBy to a future explicit-offset timestamp. Server must have JOURNEY_DATA_MODE=live and a private TFL_APP_KEY. Never put credentials in Postman. A response is not proof of passenger readiness."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "arriveBy",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Check live station arrival",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/api/v1/journey-check",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": {\n    \"name\": \"Stratford\",\n    \"tflStopPointId\": \"940GZZLUSTD\"\n  },\n  \"destination\": {\n    \"name\": \"Waterloo\",\n    \"tflStopPointId\": \"940GZZLUWLO\"\n  },\n  \"arriveBy\": \"{{arriveBy}}\",\n  \"safetyBufferMinutes\": 5\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!/(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(pm.variables.get('arriveBy') || '') || !pm.variables.get('arriveBy') || !Number.isFinite(Date.parse(pm.variables.get('arriveBy'))) || Date.parse(pm.variables.get('arriveBy')) <= Date.now()) { pm.execution.skipRequest(); throw new Error('Set arriveBy to a future explicit-offset timestamp before sending.'); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Live station-only response', () => { const b = pm.response.json(); pm.expect(b.dataMode).to.equal('live'); pm.expect(b.stationOnly).to.equal(true); pm.expect(['viable','tight','not_viable','unable_to_verify']).to.include(b.status); });",
+              "pm.test('No cache', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));",
+              "pm.test('Internal validation warning', () => pm.expect(pm.response.json().warnings.join(' ')).to.include('Internal validation only'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,11 @@
 import { createApp } from './app.js';
 import { readConfig } from './config.js';
+import { createAssessmentService } from './journey/assessment-service.js';
 
 const config = readConfig(process.env);
-const server = createApp().listen(config.port, () => {
+const server = createApp(
+  createAssessmentService(config.journeyProvider),
+).listen(config.port, () => {
   console.info(`LastLink API listening on port ${config.port}`);
 });
 

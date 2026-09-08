@@ -3,13 +3,18 @@ import { test } from 'node:test';
 import { readConfig } from '../src/config.js';
 
 await test('configuration uses local defaults', () => {
-  assert.deepEqual(readConfig({}), { port: 3000, nodeEnv: 'development' });
+  assert.deepEqual(readConfig({}), {
+    port: 3000,
+    nodeEnv: 'development',
+    journeyProvider: { mode: 'fixture' },
+  });
 });
 
 await test('configuration accepts valid deployment values', () => {
   assert.deepEqual(readConfig({ PORT: '10000', NODE_ENV: 'production' }), {
     port: 10000,
     nodeEnv: 'production',
+    journeyProvider: { mode: 'fixture' },
   });
   assert.equal(readConfig({ PORT: '1' }).port, 1);
   assert.equal(readConfig({ PORT: '65535' }).port, 65535);

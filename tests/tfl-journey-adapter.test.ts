@@ -10,7 +10,7 @@ import type { ValidatedJourneyCheckRequest } from '../src/journey/types.js';
 
 function validatedRequest(): ValidatedJourneyCheckRequest {
   const result = validateJourneyCheckRequest({
-    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
+    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
     destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
     arriveBy: '2026-09-07T00:35:00+01:00',
     safetyBufferMinutes: 5,

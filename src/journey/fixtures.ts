@@ -28,7 +28,7 @@ function makeRequest(
   requestArriveBy = arriveBy,
 ): JourneyCheckRequestInput {
   return {
-    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
+    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
     destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
     arriveBy: requestArriveBy,
     safetyBufferMinutes,

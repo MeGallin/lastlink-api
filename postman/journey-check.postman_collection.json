@@ -13,7 +13,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSFD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 20, \"stepFreeRequired\": false }\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 20, \"stepFreeRequired\": false }\n}",
           "options": { "raw": { "language": "json" } }
         }
       },

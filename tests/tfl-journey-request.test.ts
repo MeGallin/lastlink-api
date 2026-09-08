@@ -9,7 +9,7 @@ function validatedRequest(
   at = '2026-09-07T00:35:00+01:00',
 ): ValidatedJourneyCheckRequest {
   const result = validateJourneyCheckRequest({
-    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSFD' },
+    origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
     destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
     arriveBy: at,
     safetyBufferMinutes: 5,
@@ -30,7 +30,7 @@ await test('TfL journey request uses the official arriving-search shape', () => 
 
   assert.equal(
     result.url.origin + result.url.pathname,
-    'https://api.tfl.gov.uk/Journey/JourneyResults/940GZZLUSFD/to/940GZZLUWLO',
+    'https://api.tfl.gov.uk/Journey/JourneyResults/940GZZLUSTD/to/940GZZLUWLO',
   );
   assert.equal(result.url.searchParams.get('date'), '20260907');
   assert.equal(result.url.searchParams.get('time'), '0035');
