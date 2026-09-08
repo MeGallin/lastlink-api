@@ -125,6 +125,15 @@ composition is covered with synthetic payloads only. It is not wired into the
 live HTTP route, request budget, cache, evidence-freshness policy or
 passenger-facing response.
 
+The protected-departure matching seam is provider-neutral. It accepts
+normalized candidates and matches by the explicit instant, requested station,
+optional National Rail CRS and event kind. Display labels are not treated as a
+unique service identity; multiple otherwise matching candidates remain
+ambiguous, and unresolved service-date or match status fails conservatively.
+Cancellation and disruption remain matched event states for the deterministic
+evaluator to handle. This helper has synthetic tests only and does not claim a
+Darwin schema or make a Darwin request.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
