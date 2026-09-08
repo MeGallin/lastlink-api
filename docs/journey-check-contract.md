@@ -91,6 +91,19 @@ The current request targets the protected-departure instant itself; it does not
 subtract transfer or safety-buffer allowances. The candidate-discovery deadline
 policy remains a reviewed live-integration decision.
 
+The credential-free TfL response normalizer currently validates the documented
+`journeys`/`legs` shape and returns every valid journey candidate rather than
+silently selecting one alternative. It requires provider timestamps with
+explicit offsets, checks chronological leg and final-arrival consistency, maps
+known TfL modes to the provider-neutral route modes, and records walking already
+included in the planner legs. It reports no journey or malformed evidence as a
+safe normalization failure. Candidate ranking, transfer allowance policy and
+live response freshness remain separate reviewed decisions; this code does not
+call TfL or establish that a journey is viable. A parsed itinerary reports
+`walkingMinutes: 0` when no walking leg is present; it does not invent a
+station-transfer or boarding allowance. That allowance remains unresolved until
+composition applies an explicitly reviewed policy.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
