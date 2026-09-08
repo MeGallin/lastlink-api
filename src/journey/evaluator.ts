@@ -8,6 +8,7 @@ import {
   type JourneyRoute,
 } from './types.js';
 import { parseExplicitInstant } from './time.js';
+import { stationNamesMatch } from './station-identity.js';
 
 export const defaultJourneyEvaluationPolicy: JourneyEvaluationPolicy = {
   maxEvidenceAgeSeconds: 120,
@@ -328,7 +329,7 @@ function validateRoute(
         'A route leg duration does not match its timestamps.',
       );
     }
-    if (previousTo !== undefined && !sameStation(previousTo, leg.from)) {
+    if (previousTo !== undefined && !stationNamesMatch(previousTo, leg.from)) {
       return reason(
         'EVIDENCE_CONTRADICTORY',
         'Adjacent route legs do not connect at the same location.',
@@ -359,8 +360,8 @@ function validateRoute(
   const firstLeg = route.legs[0];
   if (
     firstLeg === undefined ||
-    !sameStation(firstLeg.from, input.request.origin.name) ||
-    !sameStation(finalLeg.to, input.request.destination.name)
+    !stationNamesMatch(firstLeg.from, input.request.origin.name) ||
+    !stationNamesMatch(finalLeg.to, input.request.destination.name)
   ) {
     return reason(
       'STATION_NOT_REACHED',
@@ -461,8 +462,4 @@ function providerIssueSummary(issues: JourneyReason[]): string {
 
 function reason(code: JourneyReason['code'], message: string): JourneyReason {
   return { code, message };
-}
-
-function sameStation(left: string, right: string): boolean {
-  return left.trim().toLowerCase() === right.trim().toLowerCase();
 }

@@ -19,6 +19,9 @@ Rail integration.
 - Missing, contradictory, stale or ambiguous evidence must produce
   `unable_to_verify`, or a more conservative negative result when a deterministic
   rule proves the route is missed.
+- TfL endpoint names may add generic trailing descriptors such as `Station` or
+  `Underground Station`; the evaluator removes only that allowlisted suffix
+  vocabulary for comparison. It does not use fuzzy or substring matching.
 - The response always includes a station-only warning; an onward departure is
   context for deriving the deadline, not an operational rail assertion.
 

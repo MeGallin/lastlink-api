@@ -223,3 +223,50 @@ await test('live journey response runs through the deterministic evaluator', asy
   assert.equal(response.body.margin.transferMinutes, 0);
   assert.equal(response.body.margin.remainingAfterBufferMinutes, 13);
 });
+
+await test('live TfL station descriptors are accepted without fuzzy matching', async () => {
+  const app = createApp(
+    createAssessmentService(
+      live,
+      {
+        async getJson() {
+          return {
+            ok: true,
+            status: 200,
+            value: {
+              journeys: [
+                {
+                  startDateTime: '2026-09-06T23:40:00',
+                  arrivalDateTime: '2026-09-07T00:07:00',
+                  legs: [
+                    {
+                      duration: 27,
+                      departureTime: '2026-09-06T23:40:00',
+                      arrivalTime: '2026-09-07T00:07:00',
+                      departurePoint: {
+                        individualStopId: '4900STFD4',
+                        commonName: 'Stratford Station',
+                      },
+                      arrivalPoint: {
+                        individualStopId: '4900WATRLMN3',
+                        commonName: 'Waterloo Station',
+                      },
+                      mode: { id: 'tube' },
+                    },
+                  ],
+                },
+              ],
+            },
+          };
+        },
+      },
+      clock,
+    ),
+  );
+  const response = await supertest(app)
+    .post('/api/v1/journey-check')
+    .send(body);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.status, 'viable');
+  assert.equal(response.body.reasons[0].code, 'BUFFER_SATISFIED');
+});

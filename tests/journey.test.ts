@@ -279,6 +279,41 @@ await test('route endpoint mismatch is fail-safe', () => {
   assert.equal(result.reasons[0]?.code, 'STATION_NOT_REACHED');
 });
 
+await test('provider station descriptors match the user station name only at the suffix', () => {
+  const route = oneLegRoute();
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      request: validRequest({
+        ...baseInput,
+        origin: { name: 'Stratford' },
+        destination: { name: 'Waterloo' },
+      }),
+      route: {
+        ...route,
+        legs: [
+          {
+            ...route.legs[0]!,
+            from: 'Stratford Station',
+            to: 'Waterloo Underground Station',
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(result.status, 'viable');
+});
+
+await test('station matching does not accept a different named station', () => {
+  const route = oneLegRoute();
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      route: { ...route, legs: [{ ...route.legs[0]!, to: 'Waterloo East' }] },
+    }),
+  );
+  assert.equal(result.status, 'unable_to_verify');
+  assert.equal(result.reasons[0]?.code, 'STATION_NOT_REACHED');
+});
+
 await test('route timing and connection contradictions are fail-safe', () => {
   const base = oneLegRoute();
   const badDuration = evaluateJourneyCheck(

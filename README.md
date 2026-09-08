@@ -51,7 +51,10 @@ cross-checks remain deferred. Offset-free Journey Planner timestamps in years
 instant matches the runtime's timezone rules. Missing spring hours and repeated
 autumn hours are rejected, not guessed. Explicit offsets are preserved.
 User deadlines still require offsets. Ambiguous query times and station-name
-mismatches remain conservative validation limits.
+mismatches remain conservative validation limits. TfL's generic trailing
+descriptors (`Station`, `Underground`, `Tube`, `National Rail`, and equivalent
+station suffixes) are normalized for endpoint comparison; arbitrary substring
+or fuzzy matching is not used.
 See `postman/live-journey-check.postman_collection.json` for a single manual
 smoke request; set its explicit-offset `arriveBy` variable to a future time.
 Do not run the fixture collection in live mode.

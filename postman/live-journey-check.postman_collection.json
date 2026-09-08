@@ -49,7 +49,8 @@
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('Live station-only response', () => { const b = pm.response.json(); pm.expect(b.dataMode).to.equal('live'); pm.expect(b.stationOnly).to.equal(true); pm.expect(['viable','tight','not_viable','unable_to_verify']).to.include(b.status); });",
               "pm.test('No cache', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));",
-              "pm.test('Internal validation warning', () => pm.expect(pm.response.json().warnings.join(' ')).to.include('Internal validation only'));"
+              "pm.test('Internal validation warning', () => pm.expect(pm.response.json().warnings.join(' ')).to.include('Internal validation only'));",
+              "pm.test('No station identity mismatch', () => pm.expect(pm.response.json().reasons.some(r => r.code === 'STATION_NOT_REACHED')).to.equal(false));"
             ]
           }
         }
