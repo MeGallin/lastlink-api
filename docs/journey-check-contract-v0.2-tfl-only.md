@@ -35,6 +35,14 @@ timetable, arrivals and disruption corroboration are not yet connected.
 
 ## Request
 
+Provider timestamps are normalized separately from user input. Offset-free TfL
+Journey Planner values (years 2000–2099) are treated as Europe/London wall times.
+Both GMT and BST candidates are checked against IANA timezone rules and exactly
+one must match. Nonexistent or repeated hours remain unresolved, yielding
+unable_to_verify through the provider failure path. Normalized route/leg and
+search timestamps include explicit offsets; explicit provider offsets are
+preserved. This does not relax the user request's explicit-offset requirement.
+
 The direct form is canonical:
 
 ```json

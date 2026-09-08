@@ -46,8 +46,12 @@ No extra transfer allowance is subtracted: a derived deadline already includes
 the user's station-transfer allowance.
 
 Only Journey Planner is connected. Timetable, arrivals and disruption
-cross-checks remain deferred. Offset-free provider timestamps, ambiguous London
-query times and station-name mismatches remain conservative validation limits.
+cross-checks remain deferred. Offset-free Journey Planner timestamps in years
+2000–2099 are interpreted as Europe/London time only when exactly one GMT/BST
+instant matches the runtime's timezone rules. Missing spring hours and repeated
+autumn hours are rejected, not guessed. Explicit offsets are preserved.
+User deadlines still require offsets. Ambiguous query times and station-name
+mismatches remain conservative validation limits.
 See `postman/live-journey-check.postman_collection.json` for a single manual
 smoke request; set its explicit-offset `arriveBy` variable to a future time.
 Do not run the fixture collection in live mode.
@@ -90,6 +94,12 @@ Import `postman/journey-check.postman_collection.json` into Postman and run it
 against `http://localhost:3000`. It covers viable, tight, derived-deadline,
 constraint-failure, unknown-station and invalid-input cases. Keep private
 environment exports out of Git.
+
+The official Postman CLI can also execute these collection scripts locally:
+`postman collection run postman/journey-check.postman_collection.json --env-var baseUrl=http://localhost:3000 --no-report-events`
+(fixture-mode server only). Keep the separate live collection on a live-mode
+server with a future explicit-offset `arriveBy` variable. Postman execution is
+mandatory for HTTP changes; direct HTTP checks do not replace its assertions.
 
 ## Layout
 

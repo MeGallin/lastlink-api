@@ -5,6 +5,13 @@ Applies to every future commit and push, including documentation, configuration,
 dependencies, tests and fixes. Earlier commits were made before this requirement;
 reviewing them now is retrospective, never a claim of prior approval.
 
+Postman clarification, 8 September: the owner requires actual Postman collection
+execution before commit/push for HTTP changes. Desktop Postman or the official
+Postman CLI must execute the saved requests and scripts. Direct HTTP smoke is
+supplementary, not a substitute. Do not request routine exceptions. If Postman
+cannot run, report the blocker and leave changes uncommitted. The historical
+one-checkpoint exception for 226e9cd does not apply to later work.
+
 ## Latest reviewed checkpoint
 
 On 7 September 2026, the provider-failure refinement was independently reviewed

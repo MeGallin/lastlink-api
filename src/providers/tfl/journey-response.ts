@@ -3,7 +3,7 @@ import type {
   JourneyRouteLeg,
   RouteMode,
 } from '../../journey/types.js';
-import { parseExplicitInstant } from '../../journey/time.js';
+import { parseTflInstant as parseProviderInstant } from './time.js';
 
 /** The small subset of a TfL Journey Planner result used by this adapter seam. */
 export interface TflJourneyPlannerCandidate {
@@ -73,7 +73,7 @@ export function normalizeTflJourneyPlannerResponse(
     const searchDateTime = parseProviderInstant(searchCriteria.dateTime);
     if (searchDateTime === undefined) {
       return invalidResponse(
-        'search criteria date/time must include an offset',
+        'search criteria date/time must resolve to an unambiguous instant',
       );
     }
     value.searchDateTime = searchDateTime.text;
@@ -106,7 +106,7 @@ function normalizeJourney(
   const arrival = parseProviderInstant(rawJourney.arrivalDateTime);
   if (start === undefined || arrival === undefined) {
     return invalidResponse(
-      'journey start and arrival times must include offsets',
+      'journey start and arrival times must resolve to unambiguous instants',
     );
   }
   if (arrival.atMs < start.atMs) {
@@ -145,7 +145,7 @@ function normalizeJourney(
 
   const route: JourneyRoute = {
     legs,
-    arrivalAt: rawJourney.arrivalDateTime as string,
+    arrivalAt: arrival.text,
     walkingMinutes,
   };
   return {
@@ -207,8 +207,8 @@ function normalizeLeg(
         mode,
         from,
         to,
-        departureAt: rawLeg.departureTime as string,
-        arrivalAt: rawLeg.arrivalTime as string,
+        departureAt: departure.text,
+        arrivalAt: arrival.text,
         durationMinutes,
         providerReference: `tfl:journey:${journeyIndex}:leg:${legIndex}`,
       },
@@ -243,10 +243,6 @@ function readMode(value: unknown): RouteMode | undefined {
   if (mode === 'bus' || mode === 'publicbus') return 'bus';
   if (mode === 'walking' || mode === 'walk') return 'walk';
   return 'other';
-}
-
-function parseProviderInstant(value: unknown) {
-  return parseExplicitInstant(value);
 }
 
 function isFiniteInteger(value: unknown): value is number {

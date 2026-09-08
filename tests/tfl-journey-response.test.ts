@@ -128,17 +128,17 @@ await test('normalizer rejects invalid provider freshness metadata', () => {
   });
 
   const offsetFreeSearchTime = normalizeTflJourneyPlannerResponse({
-    searchCriteria: { dateTime: '2026-09-06T23:35:00' },
+    searchCriteria: { dateTime: '2026-10-25T01:35:00' },
     journeys: validResponse.journeys,
   });
   assert.deepEqual(offsetFreeSearchTime, {
     ok: false,
     code: 'INVALID_RESPONSE',
-    message: 'search criteria date/time must include an offset',
+    message: 'search criteria date/time must resolve to an unambiguous instant',
   });
 });
 
-await test('normalizer rejects offset-free provider times', () => {
+await test('normalizer resolves offset-free London times consistently with explicit legs', () => {
   const result = normalizeTflJourneyPlannerResponse({
     journeys: [
       {
@@ -158,11 +158,12 @@ await test('normalizer rejects offset-free provider times', () => {
     ],
   });
 
-  assert.deepEqual(result, {
-    ok: false,
-    code: 'INVALID_RESPONSE',
-    message: 'journey start and arrival times must include offsets',
-  });
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(
+    result.value.candidates[0]?.route.arrivalAt,
+    '2026-09-07T00:07:00+01:00',
+  );
 });
 
 await test('normalizer rejects inconsistent leg chronology and endpoint timing', () => {
