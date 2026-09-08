@@ -1,4 +1,5 @@
 import type {
+  JourneyLegInstructions,
   JourneyRoute,
   JourneyRouteLeg,
   RouteMode,
@@ -181,6 +182,14 @@ function normalizeLeg(
   const to = readPointName(rawLeg.arrivalPoint);
   const mode = readMode(rawLeg.mode);
   const lineName = readLineName(rawLeg.routeOptions);
+  const directions = readDirections(rawLeg.routeOptions);
+  const scheduledDeparture = readOptionalProviderInstant(
+    rawLeg.scheduledDepartureTime,
+  );
+  const scheduledArrival = readOptionalProviderInstant(
+    rawLeg.scheduledArrivalTime,
+  );
+  const instructions = readInstructions(rawLeg.instruction);
   const durationMinutes = rawLeg.duration;
   if (
     departure === undefined ||
@@ -188,6 +197,8 @@ function normalizeLeg(
     from === undefined ||
     to === undefined ||
     mode === undefined ||
+    scheduledDeparture === invalidOptionalInstant ||
+    scheduledArrival === invalidOptionalInstant ||
     !isFiniteInteger(durationMinutes) ||
     durationMinutes < 0
   ) {
@@ -195,6 +206,15 @@ function normalizeLeg(
   }
   if (arrival.atMs < departure.atMs) {
     return invalidResponse('journey leg arrival cannot precede departure');
+  }
+  if (
+    scheduledDeparture !== undefined &&
+    scheduledArrival !== undefined &&
+    scheduledArrival.atMs < scheduledDeparture.atMs
+  ) {
+    return invalidResponse(
+      'scheduled journey leg arrival cannot precede departure',
+    );
   }
 
   return {
@@ -207,10 +227,18 @@ function normalizeLeg(
       routeLeg: {
         mode,
         ...(lineName === undefined ? {} : { lineName }),
+        ...(directions === undefined ? {} : { directions }),
         from,
         to,
         departureAt: departure.text,
         arrivalAt: arrival.text,
+        ...(scheduledDeparture === undefined
+          ? {}
+          : { scheduledDepartureAt: scheduledDeparture.text }),
+        ...(scheduledArrival === undefined
+          ? {}
+          : { scheduledArrivalAt: scheduledArrival.text }),
+        ...(instructions === undefined ? {} : { instructions }),
         durationMinutes,
         providerReference: `tfl:journey:${journeyIndex}:leg:${legIndex}`,
       },
@@ -255,6 +283,60 @@ function readLineName(value: unknown): string | undefined {
     if (typeof name === 'string' && name.trim() !== '') return name.trim();
   }
   return undefined;
+}
+
+function readDirections(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const directions = value.flatMap((option) => {
+    if (!isRecord(option) || !Array.isArray(option.directions)) return [];
+    return option.directions.filter(
+      (direction): direction is string =>
+        typeof direction === 'string' && direction.trim() !== '',
+    );
+  });
+  const uniqueDirections = [
+    ...new Set(directions.map((direction) => direction.trim())),
+  ];
+  return uniqueDirections.length > 0 ? uniqueDirections : undefined;
+}
+
+function readOptionalProviderInstant(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  const parsed = parseProviderInstant(value);
+  return parsed ?? invalidOptionalInstant;
+}
+
+const invalidOptionalInstant = Symbol('invalidOptionalInstant');
+
+function readInstructions(value: unknown): JourneyLegInstructions | undefined {
+  if (!isRecord(value)) return undefined;
+  const summary = readOptionalText(value.summary);
+  const detailed = readOptionalText(value.detailed);
+  const steps = Array.isArray(value.steps)
+    ? value.steps.flatMap((step) => {
+        if (!isRecord(step)) return [];
+        const description = readOptionalText(step.description);
+        return description === undefined ? [] : [description];
+      })
+    : undefined;
+  if (
+    summary === undefined &&
+    detailed === undefined &&
+    (steps === undefined || steps.length === 0)
+  ) {
+    return undefined;
+  }
+  return {
+    ...(summary === undefined ? {} : { summary }),
+    ...(detailed === undefined ? {} : { detailed }),
+    ...(steps === undefined || steps.length === 0 ? {} : { steps }),
+  };
+}
+
+function readOptionalText(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() !== ''
+    ? value.trim()
+    : undefined;
 }
 
 function isFiniteInteger(value: unknown): value is number {

@@ -21,7 +21,21 @@ const validResponse = {
           departurePoint: { commonName: 'Stratford' },
           arrivalPoint: { commonName: 'Waterloo' },
           mode: { id: 'tube', name: 'Tube' },
-          routeOptions: [{ name: 'Jubilee' }],
+          routeOptions: [
+            {
+              name: 'Jubilee',
+              directions: ['Towards Stanmore', 'Towards Stanmore'],
+            },
+          ],
+          instruction: {
+            summary: 'Take the Jubilee line',
+            detailed: 'Take the Jubilee line towards Stanmore',
+            steps: [
+              { description: 'Follow signs to the Jubilee line platform' },
+            ],
+          },
+          scheduledDepartureTime: '2026-09-06T23:44:00+01:00',
+          scheduledArrivalTime: '2026-09-07T00:02:00+01:00',
         },
         {
           duration: 4,
@@ -66,6 +80,22 @@ await test('normalizes TfL journeys without choosing between alternatives', () =
   assert.equal(result.value.candidates[0]?.route.walkingMinutes, 4);
   assert.equal(result.value.candidates[0]?.route.legs[0]?.mode, 'tube');
   assert.equal(result.value.candidates[0]?.route.legs[0]?.lineName, 'Jubilee');
+  assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.directions, [
+    'Towards Stanmore',
+  ]);
+  assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.instructions, {
+    summary: 'Take the Jubilee line',
+    detailed: 'Take the Jubilee line towards Stanmore',
+    steps: ['Follow signs to the Jubilee line platform'],
+  });
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.scheduledDepartureAt,
+    '2026-09-06T23:44:00+01:00',
+  );
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.scheduledArrivalAt,
+    '2026-09-07T00:02:00+01:00',
+  );
   assert.equal(result.value.candidates[0]?.route.legs[1]?.mode, 'walk');
   assert.equal(result.value.candidates[1]?.alternativeRoute, true);
   assert.equal(result.value.candidates[1]?.route.walkingMinutes, 0);
@@ -247,5 +277,32 @@ await test('normalizer rejects inconsistent leg chronology and endpoint timing',
     ok: false,
     code: 'INVALID_RESPONSE',
     message: 'journey start must match the first leg departure',
+  });
+});
+
+await test('normalizer rejects invalid optional scheduled timestamps', () => {
+  const result = normalizeTflJourneyPlannerResponse({
+    journeys: [
+      {
+        startDateTime: '2026-12-07T00:00:00Z',
+        arrivalDateTime: '2026-12-07T00:15:00Z',
+        legs: [
+          {
+            duration: 15,
+            departureTime: '2026-12-07T00:00:00Z',
+            arrivalTime: '2026-12-07T00:15:00Z',
+            scheduledDepartureTime: 'not-a-date',
+            departurePoint: { commonName: 'A' },
+            arrivalPoint: { commonName: 'B' },
+            mode: { id: 'tube' },
+          },
+        ],
+      },
+    ],
+  });
+  assert.deepEqual(result, {
+    ok: false,
+    code: 'INVALID_RESPONSE',
+    message: 'journey leg is missing required normalized fields',
   });
 });

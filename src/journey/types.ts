@@ -76,13 +76,23 @@ export type JourneyRequestValidation =
 export type RouteMode =
   'tube' | 'overground' | 'rail' | 'bus' | 'walk' | 'other';
 
+export interface JourneyLegInstructions {
+  summary?: string;
+  detailed?: string;
+  steps?: string[];
+}
+
 export interface JourneyRouteLeg {
   mode: RouteMode;
   lineName?: string;
+  directions?: string[];
   from: string;
   to: string;
   departureAt: string;
   arrivalAt: string;
+  scheduledDepartureAt?: string;
+  scheduledArrivalAt?: string;
+  instructions?: JourneyLegInstructions;
   durationMinutes: number;
   providerReference: string;
 }

@@ -173,7 +173,13 @@ decisions. Values below are illustrative fixture data only.
 `lineName` is optional provider-supplied line information. It is included when
 TfL provides a named route option, such as `Jubilee`, and omitted when no
 reliable line name is present. Station endpoints remain explicit in `from` and
-`to`; the response does not claim platform-level instructions.
+`to`; the response does not claim platform-level instructions. A route leg may
+also include optional provider-preserved `directions`, `instructions`,
+`scheduledDepartureAt` and `scheduledArrivalAt` fields. These are descriptive
+Journey Planner fields only; they are not a live vehicle prediction. The
+current live adapter does not yet corroborate them with the separate TfL
+Arrivals endpoints. Invalid optional scheduled timestamps invalidate the
+provider response rather than being silently displayed.
 
 ## Decision statuses
 
