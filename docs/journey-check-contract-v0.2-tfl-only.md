@@ -139,6 +139,7 @@ decisions. Values below are illustrative fixture data only.
     "legs": [
       {
         "mode": "tube",
+        "lineName": "Jubilee",
         "from": "Stratford",
         "to": "Waterloo",
         "departureAt": "2026-09-06T23:45:00+01:00",
@@ -168,6 +169,11 @@ decisions. Values below are illustrative fixture data only.
   "warnings": ["Fixture data only; do not use for travel decisions."]
 }
 ```
+
+`lineName` is optional provider-supplied line information. It is included when
+TfL provides a named route option, such as `Jubilee`, and omitted when no
+reliable line name is present. Station endpoints remain explicit in `from` and
+`to`; the response does not claim platform-level instructions.
 
 ## Decision statuses
 

@@ -21,6 +21,7 @@ const validResponse = {
           departurePoint: { commonName: 'Stratford' },
           arrivalPoint: { commonName: 'Waterloo' },
           mode: { id: 'tube', name: 'Tube' },
+          routeOptions: [{ name: 'Jubilee' }],
         },
         {
           duration: 4,
@@ -64,6 +65,7 @@ await test('normalizes TfL journeys without choosing between alternatives', () =
   );
   assert.equal(result.value.candidates[0]?.route.walkingMinutes, 4);
   assert.equal(result.value.candidates[0]?.route.legs[0]?.mode, 'tube');
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.lineName, 'Jubilee');
   assert.equal(result.value.candidates[0]?.route.legs[1]?.mode, 'walk');
   assert.equal(result.value.candidates[1]?.alternativeRoute, true);
   assert.equal(result.value.candidates[1]?.route.walkingMinutes, 0);

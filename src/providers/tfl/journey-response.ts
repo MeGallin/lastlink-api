@@ -180,6 +180,7 @@ function normalizeLeg(
   const from = readPointName(rawLeg.departurePoint);
   const to = readPointName(rawLeg.arrivalPoint);
   const mode = readMode(rawLeg.mode);
+  const lineName = readLineName(rawLeg.routeOptions);
   const durationMinutes = rawLeg.duration;
   if (
     departure === undefined ||
@@ -205,6 +206,7 @@ function normalizeLeg(
       durationMinutes,
       routeLeg: {
         mode,
+        ...(lineName === undefined ? {} : { lineName }),
         from,
         to,
         departureAt: departure.text,
@@ -243,6 +245,16 @@ function readMode(value: unknown): RouteMode | undefined {
   if (mode === 'bus' || mode === 'publicbus') return 'bus';
   if (mode === 'walking' || mode === 'walk') return 'walk';
   return 'other';
+}
+
+function readLineName(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined;
+  for (const option of value) {
+    if (!isRecord(option)) continue;
+    const name = option.name;
+    if (typeof name === 'string' && name.trim() !== '') return name.trim();
+  }
+  return undefined;
 }
 
 function isFiniteInteger(value: unknown): value is number {

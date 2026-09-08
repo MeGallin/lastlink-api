@@ -78,6 +78,7 @@ export type RouteMode =
 
 export interface JourneyRouteLeg {
   mode: RouteMode;
+  lineName?: string;
   from: string;
   to: string;
   departureAt: string;
