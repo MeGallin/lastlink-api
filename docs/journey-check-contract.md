@@ -81,6 +81,16 @@ schemas; each adapter must still normalize and validate its own response. It is
 also not wired into the fixture-only route until the actual provider products
 and endpoint contracts are empirically confirmed.
 
+The current TfL request-builder slice is limited to constructing the official
+Journey Planner URL and query parameters from a validated request. It keeps the
+app key out of the internal budget key and requires HTTPS without credentials,
+query or fragment data in the configured base URL. It does not call TfL, parse
+the response or claim that any returned journey is viable; those remain separate
+reviewed adapter and empirical-validation steps.
+The current request targets the protected-departure instant itself; it does not
+subtract transfer or safety-buffer allowances. The candidate-discovery deadline
+policy remains a reviewed live-integration decision.
+
 The current fixture adapter implements both contracts with deterministic data. It
 uses a frozen evaluation clock and the first matching labelled fixture; the HTTP
 request cannot select individual evaluator scenarios. This is deliberate test
