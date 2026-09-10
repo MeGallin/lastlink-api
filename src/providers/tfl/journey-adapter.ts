@@ -5,6 +5,7 @@ import type {
 } from '../contracts.js';
 import type { ProviderHttpClient } from '../http-client.js';
 import { parseExplicitInstant } from '../../journey/time.js';
+import { routeEndpointsMatch } from '../../journey/route-identity.js';
 import { buildTflJourneyPlannerRequest } from './journey-request.js';
 import { normalizeTflJourneyPlannerResponse } from './journey-response.js';
 import {
@@ -75,7 +76,18 @@ export function createTflJourneyPlannerAdapter(
         };
       }
 
-      const ranked = rankTflJourneyCandidates(normalized.value.candidates, {
+      const matchingCandidates = normalized.value.candidates.filter(
+        ({ route }) =>
+          routeEndpointsMatch(route, request.origin, request.destination),
+      );
+      if (matchingCandidates.length === 0) {
+        return {
+          dataMode: 'live',
+          value: { route: null, transferMinutes: options.transferMinutes },
+          evidence,
+        };
+      }
+      const ranked = rankTflJourneyCandidates(matchingCandidates, {
         arriveByAtMs: request.deadline.arriveByAtMs,
         transferMinutes: options.transferMinutes,
         safetyBufferMinutes: request.safetyBufferMinutes,
@@ -89,7 +101,21 @@ export function createTflJourneyPlannerAdapter(
         request.constraints.walkingMinutesLimit,
         request.constraints.stepFreeRequired,
       );
-      if (selected === undefined) {
+      const fallback = ranked.rankedCandidates[0];
+      if (selected === undefined && fallback === undefined) {
+        return {
+          dataMode: 'live',
+          value: { route: null, transferMinutes: options.transferMinutes },
+          evidence,
+        };
+      }
+
+      // Keep the best valid provider route when every option is already
+      // departed or violates a requested constraint. The evaluator can then
+      // classify the result as not viable and explain why, rather than
+      // mislabelling valid but uncapturable evidence as incomplete.
+      const chosen = selected ?? fallback;
+      if (chosen === undefined) {
         return {
           dataMode: 'live',
           value: { route: null, transferMinutes: options.transferMinutes },
@@ -100,7 +126,7 @@ export function createTflJourneyPlannerAdapter(
       return {
         dataMode: 'live',
         value: {
-          route: selected.candidate.route,
+          route: chosen.candidate.route,
           transferMinutes: options.transferMinutes,
         },
         evidence: [journeyEvidence(capturedAt, 'sufficient')],

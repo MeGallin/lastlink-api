@@ -178,8 +178,8 @@ function normalizeLeg(
     return invalidResponse('journey leg must be an object');
   const departure = parseProviderInstant(rawLeg.departureTime);
   const arrival = parseProviderInstant(rawLeg.arrivalTime);
-  const from = readPointName(rawLeg.departurePoint);
-  const to = readPointName(rawLeg.arrivalPoint);
+  const from = readPoint(rawLeg.departurePoint);
+  const to = readPoint(rawLeg.arrivalPoint);
   const mode = readMode(rawLeg.mode);
   const lineName = readLineName(rawLeg.routeOptions);
   const directions = readDirections(rawLeg.routeOptions);
@@ -228,8 +228,20 @@ function normalizeLeg(
         mode,
         ...(lineName === undefined ? {} : { lineName }),
         ...(directions === undefined ? {} : { directions }),
-        from,
-        to,
+        from: from.name,
+        ...(from.tflStopPointId === undefined
+          ? {}
+          : { fromTflStopPointId: from.tflStopPointId }),
+        ...(from.interchangeId === undefined
+          ? {}
+          : { fromInterchangeId: from.interchangeId }),
+        to: to.name,
+        ...(to.tflStopPointId === undefined
+          ? {}
+          : { toTflStopPointId: to.tflStopPointId }),
+        ...(to.interchangeId === undefined
+          ? {}
+          : { toInterchangeId: to.interchangeId }),
         departureAt: departure.text,
         arrivalAt: arrival.text,
         ...(scheduledDeparture === undefined
@@ -246,15 +258,30 @@ function normalizeLeg(
   };
 }
 
-function readPointName(value: unknown): string | undefined {
+interface TflPointIdentity {
+  name: string;
+  tflStopPointId?: string;
+  interchangeId?: string;
+}
+
+function readPoint(value: unknown): TflPointIdentity | undefined {
   if (!isRecord(value)) return undefined;
+  let name: string | undefined;
   for (const field of ['commonName', 'name', 'stationName', 'description']) {
     const candidate = value[field];
     if (typeof candidate === 'string' && candidate.trim() !== '') {
-      return candidate;
+      name = candidate.trim();
+      break;
     }
   }
-  return undefined;
+  if (name === undefined) return undefined;
+  const tflStopPointId = readOptionalText(value.naptanId);
+  const interchangeId = readOptionalText(value.icsCode);
+  return {
+    name,
+    ...(tflStopPointId === undefined ? {} : { tflStopPointId }),
+    ...(interchangeId === undefined ? {} : { interchangeId }),
+  };
 }
 
 function readMode(value: unknown): RouteMode | undefined {

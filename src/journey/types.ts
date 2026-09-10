@@ -87,7 +87,15 @@ export interface JourneyRouteLeg {
   lineName?: string;
   directions?: string[];
   from: string;
+  /** TfL StopPoint identity for the leg origin, when the provider supplies it. */
+  fromTflStopPointId?: string;
+  /** Internal TfL interchange identity used to connect different StopPoints. */
+  fromInterchangeId?: string;
   to: string;
+  /** TfL StopPoint identity for the leg destination, when the provider supplies it. */
+  toTflStopPointId?: string;
+  /** Internal TfL interchange identity used to connect different StopPoints. */
+  toInterchangeId?: string;
   departureAt: string;
   arrivalAt: string;
   scheduledDepartureAt?: string;
@@ -102,6 +110,8 @@ export interface JourneyRoute {
   arrivalAt: string;
   walkingMinutes?: number;
   stepFreeAvailable?: boolean;
+  /** Present when fare/ticket eligibility needs an explicit user check. */
+  fareWarning?: string;
 }
 
 export interface EvidenceRecord {

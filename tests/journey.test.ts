@@ -82,6 +82,24 @@ await test('fixture catalogue evaluates through the TfL-only contract', async ()
   }
 });
 
+await test('rail routes carry an explicit fare-eligibility warning', () => {
+  const base = oneLegRoute();
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      route: {
+        ...base,
+        legs: [{ ...base.legs[0]!, mode: 'rail' }],
+      },
+    }),
+  );
+
+  assert.equal(result.status, 'viable');
+  assert.match(
+    result.route?.fareWarning ?? '',
+    /National Rail.*fare or ticket eligibility/,
+  );
+});
+
 await test('validation accepts a direct arrive-by deadline', () => {
   const result = validateJourneyCheckRequest(baseInput);
   assert.equal(result.ok, true);
@@ -303,6 +321,90 @@ await test('provider station descriptors match the user station name only at the
   assert.equal(result.status, 'viable');
 });
 
+await test('line-specific station labels and station access walks match by StopPoint identity', () => {
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      request: validRequest({
+        ...baseInput,
+        origin: {
+          name: 'Tottenham Hale',
+          tflStopPointId: '940GZZLUTMH',
+        },
+        destination: {
+          name: 'Edgware Road (Bakerloo)',
+          tflStopPointId: '940GZZLUERB',
+        },
+      }),
+      route: {
+        arrivalAt: '2026-09-07T00:13:00+01:00',
+        walkingMinutes: 8,
+        legs: [
+          {
+            mode: 'walk',
+            from: 'Tottenham Hale Station',
+            to: 'Tottenham Hale Underground Station',
+            toTflStopPointId: '940GZZLUTMH',
+            departureAt: '2026-09-06T23:45:00+01:00',
+            arrivalAt: '2026-09-06T23:48:00+01:00',
+            durationMinutes: 3,
+            providerReference: 'test-walk-origin',
+          },
+          {
+            mode: 'tube',
+            from: 'Tottenham Hale Underground Station',
+            fromTflStopPointId: '940GZZLUTMH',
+            to: 'Edgware Road Underground Station',
+            toTflStopPointId: '940GZZLUERB',
+            departureAt: '2026-09-06T23:48:00+01:00',
+            arrivalAt: '2026-09-07T00:08:00+01:00',
+            durationMinutes: 20,
+            providerReference: 'test-tube',
+          },
+          {
+            mode: 'walk',
+            from: 'Edgware Road Underground Station',
+            fromTflStopPointId: '940GZZLUERB',
+            to: 'Edgware Road (Bakerloo line) Station',
+            departureAt: '2026-09-07T00:08:00+01:00',
+            arrivalAt: '2026-09-07T00:13:00+01:00',
+            durationMinutes: 5,
+            providerReference: 'test-walk-destination',
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(result.status, 'viable');
+  assert.equal(result.reasons[0]?.code, 'BUFFER_SATISFIED');
+});
+
+await test('a conflicting TfL StopPoint identity remains fail-safe', () => {
+  const route = oneLegRoute();
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      request: validRequest({
+        ...baseInput,
+        destination: {
+          name: 'Edgware Road (Bakerloo)',
+          tflStopPointId: '940GZZLUERB',
+        },
+      }),
+      route: {
+        ...route,
+        legs: [
+          {
+            ...route.legs[0]!,
+            to: 'Edgware Road Underground Station',
+            toTflStopPointId: '940GZZLUERC',
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(result.status, 'unable_to_verify');
+  assert.equal(result.reasons[0]?.code, 'STATION_NOT_REACHED');
+});
+
 await test('station matching does not accept a different named station', () => {
   const route = oneLegRoute();
   const result = evaluateJourneyCheck(
@@ -312,6 +414,43 @@ await test('station matching does not accept a different named station', () => {
   );
   assert.equal(result.status, 'unable_to_verify');
   assert.equal(result.reasons[0]?.code, 'STATION_NOT_REACHED');
+});
+
+await test('interchange StopPoints connect through the provider interchange identity', () => {
+  const result = evaluateJourneyCheck(
+    fixtureAssessmentInput({
+      route: {
+        arrivalAt: '2026-09-07T00:17:00+01:00',
+        walkingMinutes: 0,
+        legs: [
+          {
+            mode: 'tube',
+            from: 'Stratford',
+            to: 'Euston Underground Station',
+            toTflStopPointId: '940GZZLUEUS',
+            toInterchangeId: '1000077',
+            departureAt: '2026-09-06T23:45:00+01:00',
+            arrivalAt: '2026-09-07T00:05:00+01:00',
+            durationMinutes: 20,
+            providerReference: 'test-tube',
+          },
+          {
+            mode: 'rail',
+            from: 'London Euston Rail Station',
+            fromTflStopPointId: '910GEUSTON',
+            fromInterchangeId: '1000077',
+            to: 'Waterloo',
+            departureAt: '2026-09-07T00:07:00+01:00',
+            arrivalAt: '2026-09-07T00:17:00+01:00',
+            durationMinutes: 10,
+            providerReference: 'test-rail',
+          },
+        ],
+      },
+    }),
+  );
+  assert.equal(result.status, 'viable');
+  assert.equal(result.reasons[0]?.code, 'BUFFER_SATISFIED');
 });
 
 await test('route timing and connection contradictions are fail-safe', () => {

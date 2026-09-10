@@ -224,6 +224,49 @@ await test('live journey response runs through the deterministic evaluator', asy
   assert.equal(response.body.margin.remainingAfterBufferMinutes, 13);
 });
 
+await test('live routes with every candidate departed are reported as not viable', async () => {
+  const app = createApp(
+    createAssessmentService(
+      live,
+      {
+        async getJson() {
+          return {
+            ok: true,
+            status: 200,
+            value: {
+              journeys: [
+                {
+                  startDateTime: '2026-09-06T23:40:00+01:00',
+                  arrivalDateTime: '2026-09-07T00:07:00+01:00',
+                  legs: [
+                    {
+                      duration: 27,
+                      departureTime: '2026-09-06T23:40:00+01:00',
+                      arrivalTime: '2026-09-07T00:07:00+01:00',
+                      departurePoint: { commonName: 'Stratford' },
+                      arrivalPoint: { commonName: 'Waterloo' },
+                      mode: { id: 'tube' },
+                    },
+                  ],
+                },
+              ],
+            },
+          };
+        },
+      },
+      () => Date.parse('2026-09-06T22:50:00Z'),
+    ),
+  );
+  const response = await supertest(app)
+    .post('/api/v1/journey-check')
+    .send(body);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.dataMode, 'live');
+  assert.equal(response.body.status, 'not_viable');
+  assert.equal(response.body.reasons[0].code, 'DEADLINE_MISSED');
+  assert.match(response.body.summary, /already departed/);
+});
+
 await test('live TfL station descriptors are accepted without fuzzy matching', async () => {
   const app = createApp(
     createAssessmentService(

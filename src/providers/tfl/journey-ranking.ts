@@ -26,8 +26,14 @@ export type TflJourneyRankingResult =
     };
 
 /**
- * Rank candidates by the deterministic margin that a caller supplied policy
- * produces. This returns every candidate; it does not itself declare viability.
+ * Rank candidates by viability first, then the application's mode preference,
+ * then the deterministic margin that a caller supplied policy produces. This
+ * returns every candidate; it does not itself declare viability.
+ *
+ * Tube and walking routes are preferred, buses are the next fallback, and
+ * rail/Overground routes are last because their fare eligibility is outside
+ * this MVP's evidence boundary. A viable rail route can still beat a
+ * non-viable non-rail route because viability remains the primary rule.
  */
 export function rankTflJourneyCandidates(
   candidates: readonly TflJourneyPlannerCandidate[],
@@ -94,6 +100,10 @@ function compareRankedCandidates(
 ): number {
   const statusDifference = statusRank(left) - statusRank(right);
   if (statusDifference !== 0) return statusDifference;
+  const modePreferenceDifference =
+    routeModePreference(left.candidate.route) -
+    routeModePreference(right.candidate.route);
+  if (modePreferenceDifference !== 0) return modePreferenceDifference;
   if (left.remainingAfterBufferMinutes !== right.remainingAfterBufferMinutes) {
     return right.remainingAfterBufferMinutes - left.remainingAfterBufferMinutes;
   }
@@ -106,6 +116,16 @@ function compareRankedCandidates(
 function statusRank(candidate: RankedTflJourneyCandidate): number {
   if (candidate.availableMinutes <= 0) return 2;
   if (candidate.remainingAfterBufferMinutes < 0) return 1;
+  return 0;
+}
+
+function routeModePreference(
+  route: RankedTflJourneyCandidate['candidate']['route'],
+): number {
+  const modes = new Set(route.legs.map((leg) => leg.mode));
+  if (modes.has('other')) return 3;
+  if (modes.has('rail') || modes.has('overground')) return 2;
+  if (modes.has('bus')) return 1;
   return 0;
 }
 

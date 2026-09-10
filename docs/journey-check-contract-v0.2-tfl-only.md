@@ -181,6 +181,13 @@ current live adapter does not yet corroborate them with the separate TfL
 Arrivals endpoints. Invalid optional scheduled timestamps invalidate the
 provider response rather than being silently displayed.
 
+When multiple catchable TfL candidates are available, the adapter ranks
+viability first, then prefers routes using Tube and walking, then bus, and
+finally rail or Overground. A viable rail route can still be selected when the
+non-rail alternatives are not viable. When the selected route contains a
+National Rail leg, `route.fareWarning` is included; LastLink does not verify
+tickets, fares, Railcards or payment eligibility.
+
 ## Decision statuses
 
 | Status             | Meaning                                                                                                                                         | Safe interpretation                          |

@@ -57,6 +57,42 @@ function successfulPayload() {
   };
 }
 
+function modePreferencePayload() {
+  return {
+    journeys: [
+      {
+        startDateTime: '2026-09-06T23:45:00+01:00',
+        arrivalDateTime: '2026-09-07T00:07:00+01:00',
+        legs: [
+          {
+            duration: 22,
+            departureTime: '2026-09-06T23:45:00+01:00',
+            arrivalTime: '2026-09-07T00:07:00+01:00',
+            departurePoint: { commonName: 'Stratford' },
+            arrivalPoint: { commonName: 'Waterloo' },
+            mode: { id: 'national-rail' },
+          },
+        ],
+      },
+      {
+        startDateTime: '2026-09-06T23:50:00+01:00',
+        arrivalDateTime: '2026-09-07T00:20:00+01:00',
+        alternativeRoute: true,
+        legs: [
+          {
+            duration: 30,
+            departureTime: '2026-09-06T23:50:00+01:00',
+            arrivalTime: '2026-09-07T00:20:00+01:00',
+            departurePoint: { commonName: 'Stratford' },
+            arrivalPoint: { commonName: 'Waterloo' },
+            mode: { id: 'tube' },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function walkingConstraintPayload() {
   return {
     journeys: [
@@ -145,6 +181,95 @@ await test('adapter composes request, normalization and explicit ranking policy'
   assert.equal(capturedUrl?.searchParams.get('timeIs'), 'Arriving');
 });
 
+await test('adapter prefers a catchable Tube alternative over faster rail', async () => {
+  const adapter = createTflJourneyPlannerAdapter({
+    baseUrl: new URL('https://api.tfl.gov.uk'),
+    client: clientReturning(modePreferencePayload(), () => undefined),
+    transferMinutes: 0,
+    readClock: () => Date.parse('2026-09-06T22:30:42Z'),
+  });
+
+  const snapshot = await adapter.getPlan(validatedRequest());
+
+  assert.equal(snapshot.failure, undefined);
+  assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:20:00+01:00');
+  assert.equal(snapshot.value?.route?.legs[0]?.mode, 'tube');
+});
+
+await test('adapter skips a faster alternative for a different line-specific station', async () => {
+  const requestResult = validateJourneyCheckRequest({
+    origin: { name: 'Tottenham Hale', tflStopPointId: '940GZZLUTMH' },
+    destination: {
+      name: 'Edgware Road (Bakerloo)',
+      tflStopPointId: '940GZZLUERB',
+    },
+    arriveBy: '2026-09-07T00:25:00+01:00',
+    safetyBufferMinutes: 5,
+    constraints: { walkingMinutesLimit: 20, stepFreeRequired: false },
+  });
+  if (!requestResult.ok) throw new Error(requestResult.issues.join('; '));
+
+  const adapter = createTflJourneyPlannerAdapter({
+    baseUrl: new URL('https://api.tfl.gov.uk'),
+    client: clientReturning(
+      {
+        journeys: [
+          {
+            startDateTime: '2026-09-06T23:40:00+01:00',
+            arrivalDateTime: '2026-09-07T00:01:00+01:00',
+            legs: [
+              {
+                duration: 21,
+                departureTime: '2026-09-06T23:40:00+01:00',
+                arrivalTime: '2026-09-07T00:01:00+01:00',
+                departurePoint: {
+                  commonName: 'Tottenham Hale Underground Station',
+                  naptanId: '940GZZLUTMH',
+                },
+                arrivalPoint: {
+                  commonName: 'Edgware Road (Circle Line) Underground Station',
+                  naptanId: '940GZZLUERC',
+                },
+                mode: { id: 'tube' },
+              },
+            ],
+          },
+          {
+            startDateTime: '2026-09-06T23:45:00+01:00',
+            arrivalDateTime: '2026-09-07T00:10:00+01:00',
+            alternativeRoute: true,
+            legs: [
+              {
+                duration: 25,
+                departureTime: '2026-09-06T23:45:00+01:00',
+                arrivalTime: '2026-09-07T00:10:00+01:00',
+                departurePoint: {
+                  commonName: 'Tottenham Hale Underground Station',
+                  naptanId: '940GZZLUTMH',
+                },
+                arrivalPoint: {
+                  commonName: 'Edgware Road (Bakerloo) Underground Station',
+                  naptanId: '940GZZLUERB',
+                },
+                mode: { id: 'tube' },
+              },
+            ],
+          },
+        ],
+      },
+      () => undefined,
+    ),
+    transferMinutes: 0,
+    readClock: () => Date.parse('2026-09-06T22:30:42Z'),
+  });
+
+  const snapshot = await adapter.getPlan(requestResult.value);
+
+  assert.equal(snapshot.failure, undefined);
+  assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:10:00+01:00');
+  assert.equal(snapshot.value?.route?.legs[0]?.toTflStopPointId, '940GZZLUERB');
+});
+
 await test('adapter skips departed top-ranked candidates', async () => {
   const adapter = createTflJourneyPlannerAdapter({
     baseUrl: new URL('https://api.tfl.gov.uk'),
@@ -171,6 +296,21 @@ await test('adapter skips a top-ranked candidate over the walking limit', async 
 
   assert.equal(snapshot.failure, undefined);
   assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:20:00+01:00');
+});
+
+await test('adapter preserves a valid route when every candidate has departed', async () => {
+  const adapter = createTflJourneyPlannerAdapter({
+    baseUrl: new URL('https://api.tfl.gov.uk'),
+    client: clientReturning(successfulPayload(), () => undefined),
+    transferMinutes: 10,
+    readClock: () => Date.parse('2026-09-06T22:50:00Z'),
+  });
+
+  const snapshot = await adapter.getPlan(validatedRequest());
+
+  assert.equal(snapshot.failure, undefined);
+  assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:07:00+01:00');
+  assert.equal(snapshot.evidence[0]?.completeness, 'sufficient');
 });
 
 await test('adapter maps no journeys to a partial route snapshot', async () => {

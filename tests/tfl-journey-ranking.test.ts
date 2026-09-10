@@ -15,6 +15,7 @@ const rankingOptions: TflJourneyRankingOptions = {
 function candidate(
   arrivalAt: string,
   alternativeRoute = false,
+  mode: 'tube' | 'bus' | 'rail' | 'other' = 'tube',
 ): TflJourneyPlannerCandidate {
   const departureAt = '2026-09-06T23:45:00+01:00';
   return {
@@ -24,7 +25,7 @@ function candidate(
       walkingMinutes: 0,
       legs: [
         {
-          mode: 'tube',
+          mode,
           from: 'Stratford',
           to: 'Waterloo',
           departureAt,
@@ -85,6 +86,67 @@ await test('ranking does not mutate candidate order and preserves every candidat
   if (!result.ok) return;
   assert.equal(result.rankedCandidates.length, candidates.length);
   assert.equal(result.rankedCandidates[1]?.candidate.alternativeRoute, true);
+});
+
+await test('ranking prefers a viable Tube route over a faster viable rail route', () => {
+  const result = rankTflJourneyCandidates(
+    [
+      candidate('2026-09-07T00:07:00+01:00', false, 'rail'),
+      candidate('2026-09-07T00:20:00+01:00', true, 'tube'),
+    ],
+    rankingOptions,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(
+    result.rankedCandidates[0]?.candidate.route.legs[0]?.mode,
+    'tube',
+  );
+  assert.equal(
+    result.rankedCandidates[1]?.candidate.route.legs[0]?.mode,
+    'rail',
+  );
+});
+
+await test('ranking uses rail when the non-rail alternative is not viable', () => {
+  const result = rankTflJourneyCandidates(
+    [
+      candidate('2026-09-07T00:40:00+01:00', false, 'tube'),
+      candidate('2026-09-07T00:20:00+01:00', true, 'rail'),
+    ],
+    rankingOptions,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(
+    result.rankedCandidates[0]?.candidate.route.legs[0]?.mode,
+    'rail',
+  );
+  assert.equal(
+    result.rankedCandidates[1]?.candidate.route.legs[0]?.mode,
+    'tube',
+  );
+});
+
+await test('ranking places unknown modes after rail and bus', () => {
+  const result = rankTflJourneyCandidates(
+    [
+      candidate('2026-09-07T00:07:00+01:00', false, 'other'),
+      candidate('2026-09-07T00:08:00+01:00', false, 'rail'),
+      candidate('2026-09-07T00:09:00+01:00', false, 'bus'),
+      candidate('2026-09-07T00:10:00+01:00', false, 'tube'),
+    ],
+    rankingOptions,
+  );
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.deepEqual(
+    result.rankedCandidates.map((item) => item.candidate.route.legs[0]?.mode),
+    ['tube', 'bus', 'rail', 'other'],
+  );
 });
 
 await test('ranking requires an explicit transfer and safety policy', () => {

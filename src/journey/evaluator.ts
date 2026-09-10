@@ -8,7 +8,10 @@ import {
   type JourneyRoute,
 } from './types.js';
 import { parseExplicitInstant } from './time.js';
-import { stationNamesMatch } from './station-identity.js';
+import {
+  routeEndpointsMatch,
+  stationConnectionMatches,
+} from './route-identity.js';
 
 export const defaultJourneyEvaluationPolicy: JourneyEvaluationPolicy = {
   maxEvidenceAgeSeconds: 120,
@@ -16,6 +19,8 @@ export const defaultJourneyEvaluationPolicy: JourneyEvaluationPolicy = {
 
 const stationOnlyWarning =
   'This checks the TfL journey to the station only. It does not check whether an onward train is running or whether you will board it.';
+const nationalRailFareWarning =
+  'This route includes a National Rail leg. Check that you have valid fare or ticket eligibility; LastLink has not checked it.';
 
 export function evaluateJourneyCheck(
   input: JourneyAssessmentInput,
@@ -147,7 +152,7 @@ export function evaluateJourneyCheck(
     availableMinutes,
     remainingAfterBufferMinutes,
   };
-  const route = input.route;
+  const route = addFareWarning(input.route);
 
   if (availableMinutes <= 0) {
     return response(
@@ -180,6 +185,11 @@ export function evaluateJourneyCheck(
     ),
     `A TfL route is currently shown to reach the station with ${remainingAfterBufferMinutes} minutes remaining after your safety buffer.`,
   );
+}
+
+function addFareWarning(route: JourneyRoute): JourneyRoute {
+  if (!route.legs.some((leg) => leg.mode === 'rail')) return route;
+  return { ...route, fareWarning: nationalRailFareWarning };
 }
 
 const fixtureWarning = 'Fixture data only; do not use for travel decisions.';
@@ -299,6 +309,8 @@ function validateRoute(
   }
   let previousArrivalMs: number | undefined;
   let previousTo: string | undefined;
+  let previousToTflStopPointId: string | undefined;
+  let previousToInterchangeId: string | undefined;
   for (const leg of route.legs) {
     const departure = parseExplicitInstant(leg.departureAt);
     const arrival = parseExplicitInstant(leg.arrivalAt);
@@ -329,7 +341,17 @@ function validateRoute(
         'A route leg duration does not match its timestamps.',
       );
     }
-    if (previousTo !== undefined && !stationNamesMatch(previousTo, leg.from)) {
+    if (
+      previousTo !== undefined &&
+      !stationConnectionMatches(
+        previousTo,
+        previousToTflStopPointId,
+        previousToInterchangeId,
+        leg.from,
+        leg.fromTflStopPointId,
+        leg.fromInterchangeId,
+      )
+    ) {
       return reason(
         'EVIDENCE_CONTRADICTORY',
         'Adjacent route legs do not connect at the same location.',
@@ -343,6 +365,8 @@ function validateRoute(
     }
     previousArrivalMs = arrival.atMs;
     previousTo = leg.to;
+    previousToTflStopPointId = leg.toTflStopPointId;
+    previousToInterchangeId = leg.toInterchangeId;
   }
   const finalLeg = route.legs[route.legs.length - 1];
   if (finalLeg === undefined) {
@@ -357,11 +381,8 @@ function validateRoute(
       'The route arrival does not match the final leg arrival.',
     );
   }
-  const firstLeg = route.legs[0];
   if (
-    firstLeg === undefined ||
-    !stationNamesMatch(firstLeg.from, input.request.origin.name) ||
-    !stationNamesMatch(finalLeg.to, input.request.destination.name)
+    !routeEndpointsMatch(route, input.request.origin, input.request.destination)
   ) {
     return reason(
       'STATION_NOT_REACHED',

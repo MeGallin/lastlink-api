@@ -18,8 +18,16 @@ const validResponse = {
           duration: 18,
           departureTime: '2026-09-06T23:45:00+01:00',
           arrivalTime: '2026-09-07T00:03:00+01:00',
-          departurePoint: { commonName: 'Stratford' },
-          arrivalPoint: { commonName: 'Waterloo' },
+          departurePoint: {
+            commonName: 'Stratford',
+            naptanId: '940GZZLUSTD',
+            icsCode: '1000001',
+          },
+          arrivalPoint: {
+            commonName: 'Waterloo',
+            naptanId: '940GZZLUWLO',
+            icsCode: '1000002',
+          },
           mode: { id: 'tube', name: 'Tube' },
           routeOptions: [
             {
@@ -41,7 +49,7 @@ const validResponse = {
           duration: 4,
           departureTime: '2026-09-07T00:03:00+01:00',
           arrivalTime: '2026-09-07T00:07:00+01:00',
-          departurePoint: { commonName: 'Waterloo' },
+          departurePoint: { commonName: 'Waterloo', naptanId: '940GZZLUWLO' },
           arrivalPoint: { commonName: 'Waterloo National Rail' },
           mode: { id: 'walking', name: 'Walking' },
         },
@@ -79,6 +87,22 @@ await test('normalizes TfL journeys without choosing between alternatives', () =
   );
   assert.equal(result.value.candidates[0]?.route.walkingMinutes, 4);
   assert.equal(result.value.candidates[0]?.route.legs[0]?.mode, 'tube');
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.fromTflStopPointId,
+    '940GZZLUSTD',
+  );
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.toTflStopPointId,
+    '940GZZLUWLO',
+  );
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.fromInterchangeId,
+    '1000001',
+  );
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.toInterchangeId,
+    '1000002',
+  );
   assert.equal(result.value.candidates[0]?.route.legs[0]?.lineName, 'Jubilee');
   assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.directions, [
     'Towards Stanmore',
@@ -127,6 +151,35 @@ await test('normalizer preserves explicit provider timestamps in the route', () 
   assert.equal(
     result.value.candidates[0]?.route.legs[0]?.departureAt,
     '2026-12-07T00:00:00Z',
+  );
+});
+
+await test('normalizer ignores an empty StopPoint identity without losing the name', () => {
+  const result = normalizeTflJourneyPlannerResponse({
+    journeys: [
+      {
+        startDateTime: '2026-12-07T00:00:00Z',
+        arrivalDateTime: '2026-12-07T00:15:00Z',
+        legs: [
+          {
+            duration: 15,
+            departureTime: '2026-12-07T00:00:00Z',
+            arrivalTime: '2026-12-07T00:15:00Z',
+            departurePoint: { commonName: 'A', naptanId: '  ' },
+            arrivalPoint: { commonName: 'B' },
+            mode: { id: 'bus' },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.from, 'A');
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.fromTflStopPointId,
+    undefined,
   );
 });
 
