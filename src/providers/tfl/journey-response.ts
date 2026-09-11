@@ -1,5 +1,7 @@
 import type {
   JourneyLegInstructions,
+  JourneyLegNotice,
+  JourneyLegNoticeKind,
   JourneyRoute,
   JourneyRouteLeg,
   RouteMode,
@@ -190,6 +192,11 @@ function normalizeLeg(
     rawLeg.scheduledArrivalTime,
   );
   const instructions = readInstructions(rawLeg.instruction);
+  const notices = readLegNotices(
+    rawLeg.disruptions,
+    rawLeg.plannedWorks,
+    rawLeg.isDisrupted,
+  );
   const durationMinutes = rawLeg.duration;
   if (
     departure === undefined ||
@@ -251,6 +258,7 @@ function normalizeLeg(
           ? {}
           : { scheduledArrivalAt: scheduledArrival.text }),
         ...(instructions === undefined ? {} : { instructions }),
+        ...(notices === undefined ? {} : { notices }),
         durationMinutes,
         providerReference: `tfl:journey:${journeyIndex}:leg:${legIndex}`,
       },
@@ -358,6 +366,55 @@ function readInstructions(value: unknown): JourneyLegInstructions | undefined {
     ...(detailed === undefined ? {} : { detailed }),
     ...(steps === undefined || steps.length === 0 ? {} : { steps }),
   };
+}
+
+const maxNoticeTextLength = 240;
+const maxNoticesPerLeg = 4;
+
+function readLegNotices(
+  disruptions: unknown,
+  plannedWorks: unknown,
+  isDisrupted: unknown,
+): JourneyLegNotice[] | undefined {
+  const notices = readProviderNotices(disruptions, 'disruption');
+  if (notices.length === 0 && isDisrupted === true) {
+    notices.push({
+      kind: 'disruption',
+      text: 'TfL marks this leg as disrupted; check current station information.',
+    });
+  }
+  notices.push(...readProviderNotices(plannedWorks, 'planned_work'));
+  const uniqueNotices = notices.filter(
+    (notice, index, all) =>
+      all.findIndex(
+        (candidate) =>
+          candidate.kind === notice.kind && candidate.text === notice.text,
+      ) === index,
+  );
+  return uniqueNotices.length > 0
+    ? uniqueNotices.slice(0, maxNoticesPerLeg)
+    : undefined;
+}
+
+function readProviderNotices(
+  value: unknown,
+  kind: JourneyLegNoticeKind,
+): JourneyLegNotice[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return [];
+    const text = [
+      item.summary,
+      item.description,
+      item.additionalInfo,
+      item.closureText,
+      item.reason,
+    ]
+      .map(readOptionalText)
+      .find((candidate): candidate is string => candidate !== undefined);
+    if (text === undefined) return [];
+    return [{ kind, text: text.slice(0, maxNoticeTextLength) }];
+  });
 }
 
 function readOptionalText(value: unknown): string | undefined {

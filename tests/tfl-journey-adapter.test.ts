@@ -35,6 +35,10 @@ function successfulPayload() {
             departurePoint: { commonName: 'Stratford' },
             arrivalPoint: { commonName: 'Waterloo' },
             mode: { id: 'tube' },
+            disruptions: [{ summary: 'Minor delays are reported.' }],
+            plannedWorks: [
+              { description: 'Platform works may affect this leg.' },
+            ],
           },
         ],
       },
@@ -50,6 +54,10 @@ function successfulPayload() {
             departurePoint: { commonName: 'Stratford' },
             arrivalPoint: { commonName: 'Waterloo' },
             mode: { id: 'tube' },
+            disruptions: [{ summary: 'Minor delays are reported.' }],
+            plannedWorks: [
+              { description: 'Platform works may affect this leg.' },
+            ],
           },
         ],
       },
@@ -162,12 +170,29 @@ await test('adapter composes request, normalization and explicit ranking policy'
     readClock: () => Date.parse('2026-09-06T22:30:42Z'),
   });
 
-  const snapshot = await adapter.getPlan(validatedRequest());
+  const request = validatedRequest();
+  request.constraints.stepFreeRequired = false;
+  const snapshot = await adapter.getPlan(request);
 
   assert.equal(snapshot.dataMode, 'live');
   assert.equal(snapshot.failure, undefined);
   assert.equal(snapshot.value?.transferMinutes, 10);
   assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:07:00+01:00');
+  assert.equal(snapshot.value?.route?.alternativeRoute, true);
+  assert.deepEqual(snapshot.value?.route?.alternatives, [
+    {
+      departureAt: '2026-09-06T23:45:00+01:00',
+      arrivalAt: '2026-09-07T00:20:00+01:00',
+      durationMinutes: 35,
+      walkingMinutes: 0,
+      remainingAfterBufferMinutes: 0,
+      segments: [{ mode: 'tube' }],
+    },
+  ]);
+  assert.deepEqual(snapshot.value?.route?.legs[0]?.notices, [
+    { kind: 'disruption', text: 'Minor delays are reported.' },
+    { kind: 'planned_work', text: 'Platform works may affect this leg.' },
+  ]);
   assert.deepEqual(snapshot.evidence, [
     {
       source: 'tfl_journey_planner',
@@ -282,6 +307,7 @@ await test('adapter skips departed top-ranked candidates', async () => {
 
   assert.equal(snapshot.failure, undefined);
   assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:20:00+01:00');
+  assert.equal(snapshot.value?.route?.alternatives, undefined);
 });
 
 await test('adapter skips a top-ranked candidate over the walking limit', async () => {
@@ -292,10 +318,13 @@ await test('adapter skips a top-ranked candidate over the walking limit', async 
     readClock: () => Date.parse('2026-09-06T22:30:00Z'),
   });
 
-  const snapshot = await adapter.getPlan(validatedRequest());
+  const request = validatedRequest();
+  request.constraints.stepFreeRequired = false;
+  const snapshot = await adapter.getPlan(request);
 
   assert.equal(snapshot.failure, undefined);
   assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:20:00+01:00');
+  assert.equal(snapshot.value?.route?.alternatives, undefined);
 });
 
 await test('adapter preserves a valid route when every candidate has departed', async () => {
@@ -311,6 +340,50 @@ await test('adapter preserves a valid route when every candidate has departed', 
   assert.equal(snapshot.failure, undefined);
   assert.equal(snapshot.value?.route?.arrivalAt, '2026-09-07T00:07:00+01:00');
   assert.equal(snapshot.evidence[0]?.completeness, 'sufficient');
+});
+
+await test('adapter omits alternative summaries when required step-free access is unknown', async () => {
+  const adapter = createTflJourneyPlannerAdapter({
+    baseUrl: new URL('https://api.tfl.gov.uk'),
+    client: clientReturning(successfulPayload(), () => undefined),
+    transferMinutes: 0,
+    readClock: () => Date.parse('2026-09-06T22:30:00Z'),
+  });
+  const snapshot = await adapter.getPlan(validatedRequest());
+  assert.equal(snapshot.failure, undefined);
+  assert.equal(snapshot.value?.route?.stepFreeAvailable, undefined);
+  assert.equal(snapshot.value?.route?.alternatives, undefined);
+});
+
+await test('adapter bounds alternative summaries to three in ranked order', async () => {
+  const payload = successfulPayload();
+  const template = payload.journeys[0]!;
+  payload.journeys = Array.from({ length: 6 }, (_, index) => {
+    const journey = structuredClone(template);
+    const arrival = `2026-09-07T00:${20 + index}:00+01:00`;
+    journey.arrivalDateTime = arrival;
+    journey.legs[0]!.arrivalTime = arrival;
+    journey.legs[0]!.duration = 35 + index;
+    return journey;
+  });
+  const adapter = createTflJourneyPlannerAdapter({
+    baseUrl: new URL('https://api.tfl.gov.uk'),
+    client: clientReturning(payload, () => undefined),
+    transferMinutes: 0,
+    readClock: () => Date.parse('2026-09-06T22:30:00Z'),
+  });
+  const request = validatedRequest();
+  request.constraints.stepFreeRequired = false;
+  const snapshot = await adapter.getPlan(request);
+  assert.equal(snapshot.failure, undefined);
+  assert.deepEqual(
+    snapshot.value?.route?.alternatives?.map(({ arrivalAt }) => arrivalAt),
+    [
+      '2026-09-07T00:21:00+01:00',
+      '2026-09-07T00:22:00+01:00',
+      '2026-09-07T00:23:00+01:00',
+    ],
+  );
 });
 
 await test('adapter maps no journeys to a partial route snapshot', async () => {

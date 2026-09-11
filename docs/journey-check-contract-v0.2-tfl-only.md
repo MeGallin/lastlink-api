@@ -175,11 +175,39 @@ TfL provides a named route option, such as `Jubilee`, and omitted when no
 reliable line name is present. Station endpoints remain explicit in `from` and
 `to`; the response does not claim platform-level instructions. A route leg may
 also include optional provider-preserved `directions`, `instructions`,
-`scheduledDepartureAt` and `scheduledArrivalAt` fields. These are descriptive
-Journey Planner fields only; they are not a live vehicle prediction. The
+`scheduledDepartureAt`, `scheduledArrivalAt` and `notices` fields. These are
+descriptive Journey Planner fields only; they are not a live vehicle prediction.
+`notices`, when present, contain only concise provider text from the leg's
+disruption or planned-work data:
+
+```json
+"notices": [
+  { "kind": "disruption", "text": "Minor delays are reported on this leg." },
+  { "kind": "planned_work", "text": "Planned platform works may affect the interchange." }
+]
+```
+
+The client presents these as advisory messages on the affected leg. They do not
+change the deterministic viability status, create an alternative route, or
+mean that a missing notice proves good service. A leg marked disrupted without
+usable provider text receives a bounded generic disruption notice. Invalid or
+empty notice entries are ignored by the adapter; raw provider payloads are not
+forwarded. The
 current live adapter does not yet corroborate them with the separate TfL
 Arrivals endpoints. Invalid optional scheduled timestamps invalidate the
 provider response rather than being silently displayed.
+
+When TfL marks the selected candidate as an alternative, `alternativeRoute`
+is `true`. The response may also include up to three compact `alternatives`
+summaries for other candidates that were catchable at evaluation time and met
+the requested walking constraints. When step-free access is requested, summaries
+require explicit confirmation; unknown access is not presented as satisfying it.
+The current normalizer does not confirm step-free access, so these summaries
+are omitted for that request. These summaries include their
+departure/arrival instants, elapsed duration, remaining margin after the
+requested buffer and an ordered list of mode/line segments. They are offered
+for comparison only; the deterministic status always belongs to the selected
+route and the client does not silently switch routes.
 
 When multiple catchable TfL candidates are available, the adapter ranks
 viability first, then prefers routes using Tube and walking, then bus, and

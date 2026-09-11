@@ -82,6 +82,27 @@ export interface JourneyLegInstructions {
   steps?: string[];
 }
 
+export type JourneyLegNoticeKind = 'disruption' | 'planned_work';
+
+export interface JourneyLegNotice {
+  kind: JourneyLegNoticeKind;
+  text: string;
+}
+
+export interface JourneyRouteAlternativeSegment {
+  mode: RouteMode;
+  lineName?: string;
+}
+
+export interface JourneyRouteAlternative {
+  departureAt: string;
+  arrivalAt: string;
+  durationMinutes: number;
+  walkingMinutes?: number;
+  remainingAfterBufferMinutes: number;
+  segments: JourneyRouteAlternativeSegment[];
+}
+
 export interface JourneyRouteLeg {
   mode: RouteMode;
   lineName?: string;
@@ -101,6 +122,8 @@ export interface JourneyRouteLeg {
   scheduledDepartureAt?: string;
   scheduledArrivalAt?: string;
   instructions?: JourneyLegInstructions;
+  /** Optional provider-sourced advisory; it does not change viability. */
+  notices?: JourneyLegNotice[];
   durationMinutes: number;
   providerReference: string;
 }
@@ -112,6 +135,10 @@ export interface JourneyRoute {
   stepFreeAvailable?: boolean;
   /** Present when fare/ticket eligibility needs an explicit user check. */
   fareWarning?: string;
+  /** True when TfL marked the selected journey as an alternative candidate. */
+  alternativeRoute?: boolean;
+  /** Compact catchable candidates considered but not selected. */
+  alternatives?: JourneyRouteAlternative[];
 }
 
 export interface EvidenceRecord {

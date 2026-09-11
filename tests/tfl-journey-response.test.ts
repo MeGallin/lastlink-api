@@ -42,6 +42,12 @@ const validResponse = {
               { description: 'Follow signs to the Jubilee line platform' },
             ],
           },
+          disruptions: [{ summary: 'Minor delays are reported on this leg.' }],
+          plannedWorks: [
+            {
+              description: 'Planned platform works may affect the interchange.',
+            },
+          ],
           scheduledDepartureTime: '2026-09-06T23:44:00+01:00',
           scheduledArrivalTime: '2026-09-07T00:02:00+01:00',
         },
@@ -112,6 +118,13 @@ await test('normalizes TfL journeys without choosing between alternatives', () =
     detailed: 'Take the Jubilee line towards Stanmore',
     steps: ['Follow signs to the Jubilee line platform'],
   });
+  assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.notices, [
+    { kind: 'disruption', text: 'Minor delays are reported on this leg.' },
+    {
+      kind: 'planned_work',
+      text: 'Planned platform works may affect the interchange.',
+    },
+  ]);
   assert.equal(
     result.value.candidates[0]?.route.legs[0]?.scheduledDepartureAt,
     '2026-09-06T23:44:00+01:00',
@@ -359,3 +372,86 @@ await test('normalizer rejects invalid optional scheduled timestamps', () => {
     message: 'journey leg is missing required normalized fields',
   });
 });
+
+await test('normalizer bounds and deduplicates provider notices without trusting malformed entries', () => {
+  const longText = 'x'.repeat(300);
+  const result = normalizeTflJourneyPlannerResponse({
+    journeys: [
+      {
+        startDateTime: '2026-12-07T00:00:00Z',
+        arrivalDateTime: '2026-12-07T00:15:00Z',
+        legs: [
+          {
+            duration: 15,
+            departureTime: '2026-12-07T00:00:00Z',
+            arrivalTime: '2026-12-07T00:15:00Z',
+            departurePoint: { commonName: 'A' },
+            arrivalPoint: { commonName: 'B' },
+            mode: { id: 'tube' },
+            isDisrupted: true,
+            disruptions: [
+              { summary: 'A repeated notice' },
+              { summary: 'A repeated notice' },
+              { description: longText },
+              { summary: '' },
+              null,
+              'not-an-object',
+            ],
+            plannedWorks: [
+              { additionalInfo: 'Works are planned.' },
+              { summary: 'A repeated notice' },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  const notices = result.value.candidates[0]?.route.legs[0]?.notices;
+  assert.deepEqual(notices, [
+    { kind: 'disruption', text: 'A repeated notice' },
+    { kind: 'disruption', text: longText.slice(0, 240) },
+    { kind: 'planned_work', text: 'Works are planned.' },
+    { kind: 'planned_work', text: 'A repeated notice' },
+  ]);
+});
+
+for (const plannedWorks of [[], [{ description: 'Platform works.' }]]) {
+  await test(`normalizer preserves generic disruption with ${plannedWorks.length} planned-work notices`, () => {
+    const result = normalizeTflJourneyPlannerResponse({
+      journeys: [
+        {
+          startDateTime: '2026-12-07T00:00:00Z',
+          arrivalDateTime: '2026-12-07T00:15:00Z',
+          legs: [
+            {
+              duration: 15,
+              departureTime: '2026-12-07T00:00:00Z',
+              arrivalTime: '2026-12-07T00:15:00Z',
+              departurePoint: { commonName: 'A' },
+              arrivalPoint: { commonName: 'B' },
+              mode: { id: 'bus' },
+              isDisrupted: true,
+              plannedWorks,
+            },
+          ],
+        },
+      ],
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.notices, [
+      {
+        kind: 'disruption',
+        text: 'TfL marks this leg as disrupted; check current station information.',
+      },
+      ...plannedWorks.map(({ description }) => ({
+        kind: 'planned_work',
+        text: description,
+      })),
+    ]);
+  });
+}
