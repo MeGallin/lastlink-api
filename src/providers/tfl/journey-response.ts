@@ -2,10 +2,15 @@ import type {
   JourneyLegInstructions,
   JourneyLegNotice,
   JourneyLegNoticeKind,
+  JourneyLegStop,
   JourneyRoute,
   JourneyRouteLeg,
   RouteMode,
 } from '../../journey/types.js';
+import {
+  canonicalStationName,
+  stationNamesMatch,
+} from '../../journey/station-identity.js';
 import { parseTflInstant as parseProviderInstant } from './time.js';
 
 /** The small subset of a TfL Journey Planner result used by this adapter seam. */
@@ -197,6 +202,13 @@ function normalizeLeg(
     rawLeg.plannedWorks,
     rawLeg.isDisrupted,
   );
+  const stationSequence = readTubeStationSequence(
+    rawLeg.path,
+    mode,
+    lineName,
+    from,
+    to,
+  );
   const durationMinutes = rawLeg.duration;
   if (
     departure === undefined ||
@@ -259,6 +271,7 @@ function normalizeLeg(
           : { scheduledArrivalAt: scheduledArrival.text }),
         ...(instructions === undefined ? {} : { instructions }),
         ...(notices === undefined ? {} : { notices }),
+        ...(stationSequence === undefined ? {} : stationSequence),
         durationMinutes,
         providerReference: `tfl:journey:${journeyIndex}:leg:${legIndex}`,
       },
@@ -270,6 +283,111 @@ interface TflPointIdentity {
   name: string;
   tflStopPointId?: string;
   interchangeId?: string;
+}
+
+interface TflPathStopIdentity {
+  name: string;
+  tflStopPointId?: string;
+}
+
+function readTubeStationSequence(
+  path: unknown,
+  mode: RouteMode | undefined,
+  lineName: string | undefined,
+  from: TflPointIdentity | undefined,
+  to: TflPointIdentity | undefined,
+): { stopCount: number; intermediateStops?: JourneyLegStop[] } | undefined {
+  if (
+    mode !== 'tube' ||
+    lineName === undefined ||
+    from === undefined ||
+    to === undefined
+  ) {
+    return undefined;
+  }
+  if (
+    !isRecord(path) ||
+    !Array.isArray(path.stopPoints) ||
+    path.stopPoints.length < 1
+  ) {
+    return undefined;
+  }
+
+  const stops: TflPathStopIdentity[] = [];
+  for (const value of path.stopPoints) {
+    const stop = readPathStopIdentity(value);
+    if (stop === undefined) return undefined;
+    stops.push(stop);
+  }
+
+  const names = stops.map((stop) => canonicalStationName(stop.name));
+  if (
+    names.some((name) => name === '') ||
+    new Set(names).size !== names.length
+  ) {
+    return undefined;
+  }
+
+  const toIndex = findUniqueStopIndex(stops, to);
+  if (toIndex === undefined || toIndex !== stops.length - 1) {
+    return undefined;
+  }
+
+  // TfL's Journey Planner path normally starts with the first stop after the
+  // boarding point and ends with the alighting point. Some fixtures and
+  // provider variants include the boarding point, so support both shapes.
+  const fromIndex = findUniqueStopIndex(stops, from);
+  const riddenStops = stops.slice(
+    fromIndex === undefined ? 0 : fromIndex + 1,
+    toIndex + 1,
+  );
+  if (riddenStops.length === 0) return undefined;
+
+  const intermediateStops = riddenStops.slice(0, -1).map(toJourneyLegStop);
+  return {
+    stopCount: riddenStops.length,
+    ...(intermediateStops.length > 0 ? { intermediateStops } : {}),
+  };
+}
+
+function readPathStopIdentity(value: unknown): TflPathStopIdentity | undefined {
+  if (!isRecord(value)) return undefined;
+  const name = [value.name, value.fullName, value.commonName, value.description]
+    .map(readOptionalText)
+    .find((candidate): candidate is string => candidate !== undefined);
+  if (name === undefined) return undefined;
+  const tflStopPointId =
+    readOptionalText(value.id) ?? readOptionalText(value.naptanId);
+  return {
+    name,
+    ...(tflStopPointId === undefined ? {} : { tflStopPointId }),
+  };
+}
+
+function findUniqueStopIndex(
+  stops: TflPathStopIdentity[],
+  point: TflPointIdentity,
+): number | undefined {
+  const matches = stops.flatMap((stop, index) =>
+    pointsMatch(stop, point) ? [index] : [],
+  );
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+function pointsMatch(stop: TflPathStopIdentity, point: TflPointIdentity) {
+  if (stop.tflStopPointId !== undefined && point.tflStopPointId !== undefined) {
+    return stop.tflStopPointId === point.tflStopPointId;
+  }
+  return stationNamesMatch(stop.name, point.name);
+}
+
+function toJourneyLegStop(stop: TflPathStopIdentity): JourneyLegStop {
+  return {
+    name: stop.name,
+    ...(stop.tflStopPointId === undefined
+      ? {}
+      : { tflStopPointId: stop.tflStopPointId }),
+  };
 }
 
 function readPoint(value: unknown): TflPointIdentity | undefined {

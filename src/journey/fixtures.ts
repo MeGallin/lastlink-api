@@ -45,8 +45,12 @@ function makeRoute(arrivalAt: string): JourneyRoute {
     legs: [
       {
         mode: 'tube',
+        lineName: 'Jubilee',
+        directions: ['Towards Stanmore'],
         from: 'Stratford',
         to: 'Waterloo',
+        stopCount: 3,
+        intermediateStops: [{ name: 'West Ham' }, { name: 'North Greenwich' }],
         departureAt,
         arrivalAt,
         durationMinutes:

@@ -35,6 +35,13 @@ const validResponse = {
               directions: ['Towards Stanmore', 'Towards Stanmore'],
             },
           ],
+          path: {
+            stopPoints: [
+              { id: '940GZZLUSWK', name: 'West Ham' },
+              { id: '940GZZLUNHG', name: 'North Greenwich' },
+              { id: '940GZZLUWLO', name: 'Waterloo' },
+            ],
+          },
           instruction: {
             summary: 'Take the Jubilee line',
             detailed: 'Take the Jubilee line towards Stanmore',
@@ -113,6 +120,14 @@ await test('normalizes TfL journeys without choosing between alternatives', () =
   assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.directions, [
     'Towards Stanmore',
   ]);
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.stopCount, 3);
+  assert.deepEqual(
+    result.value.candidates[0]?.route.legs[0]?.intermediateStops,
+    [
+      { name: 'West Ham', tflStopPointId: '940GZZLUSWK' },
+      { name: 'North Greenwich', tflStopPointId: '940GZZLUNHG' },
+    ],
+  );
   assert.deepEqual(result.value.candidates[0]?.route.legs[0]?.instructions, {
     summary: 'Take the Jubilee line',
     detailed: 'Take the Jubilee line towards Stanmore',
@@ -192,6 +207,85 @@ await test('normalizer ignores an empty StopPoint identity without losing the na
   assert.equal(result.value.candidates[0]?.route.legs[0]?.from, 'A');
   assert.equal(
     result.value.candidates[0]?.route.legs[0]?.fromTflStopPointId,
+    undefined,
+  );
+});
+
+await test('normalizer omits an unsafe Tube station sequence', () => {
+  const result = normalizeTflJourneyPlannerResponse({
+    journeys: [
+      {
+        startDateTime: '2026-12-07T00:00:00Z',
+        arrivalDateTime: '2026-12-07T00:15:00Z',
+        legs: [
+          {
+            duration: 15,
+            departureTime: '2026-12-07T00:00:00Z',
+            arrivalTime: '2026-12-07T00:15:00Z',
+            departurePoint: { commonName: 'A', naptanId: 'A-ID' },
+            arrivalPoint: { commonName: 'B', naptanId: 'B-ID' },
+            mode: { id: 'tube' },
+            routeOptions: [{ name: 'Northern', directions: ['Towards B'] }],
+            path: {
+              stopPoints: [
+                { id: 'A-ID', name: 'A' },
+                { id: 'D-ID', name: 'Duplicate' },
+                { id: 'D-ID-2', name: 'Duplicate' },
+                { id: 'B-ID', name: 'B' },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.stopCount, undefined);
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.intermediateStops,
+    undefined,
+  );
+});
+
+await test('normalizer omits a Tube sequence when endpoint identity conflicts', () => {
+  const payload = structuredClone(validResponse);
+  const leg = payload.journeys[0]?.legs[0];
+  if (leg === undefined || !('path' in leg))
+    throw new Error('Tube fixture shape changed');
+  const destinationStop = leg.path.stopPoints[2];
+  if (destinationStop === undefined)
+    throw new Error('Tube fixture path changed');
+  destinationStop.id = '940GZZLUOTHER';
+  const result = normalizeTflJourneyPlannerResponse(payload);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.stopCount, undefined);
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.intermediateStops,
+    undefined,
+  );
+});
+
+await test('normalizer uses only trailing station descriptors for a Tube sequence', () => {
+  const payload = structuredClone(validResponse);
+  const leg = payload.journeys[0]?.legs[0];
+  if (leg === undefined || !('path' in leg))
+    throw new Error('Tube fixture shape changed');
+  const destinationStop = leg.path.stopPoints[2];
+  if (destinationStop === undefined)
+    throw new Error('Tube fixture path changed');
+  delete (leg.arrivalPoint as { naptanId?: string }).naptanId;
+  destinationStop.name = 'Waterloo Station East';
+  const result = normalizeTflJourneyPlannerResponse(payload);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.value.candidates[0]?.route.legs[0]?.stopCount, undefined);
+  assert.equal(
+    result.value.candidates[0]?.route.legs[0]?.intermediateStops,
     undefined,
   );
 });

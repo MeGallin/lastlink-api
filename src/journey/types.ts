@@ -89,6 +89,12 @@ export interface JourneyLegNotice {
   text: string;
 }
 
+export interface JourneyLegStop {
+  name: string;
+  /** TfL StopPoint identity when the Journey Planner path supplies one. */
+  tflStopPointId?: string;
+}
+
 export interface JourneyRouteAlternativeSegment {
   mode: RouteMode;
   lineName?: string;
@@ -124,6 +130,10 @@ export interface JourneyRouteLeg {
   instructions?: JourneyLegInstructions;
   /** Optional provider-sourced advisory; it does not change viability. */
   notices?: JourneyLegNotice[];
+  /** Number of passenger stops from boarding through alighting, including the destination stop. */
+  stopCount?: number;
+  /** Ordered passenger stops strictly between the boarding and alighting stops. */
+  intermediateStops?: JourneyLegStop[];
   durationMinutes: number;
   providerReference: string;
 }

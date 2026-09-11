@@ -197,6 +197,16 @@ current live adapter does not yet corroborate them with the separate TfL
 Arrivals endpoints. Invalid optional scheduled timestamps invalidate the
 provider response rather than being silently displayed.
 
+For a Tube leg, the response may also include `stopCount` and
+`intermediateStops` when TfL supplies a trustworthy ordered `path.stopPoints`
+sequence. `stopCount` is the number of passenger stops from the boarding stop
+through the alighting stop, so it includes the destination. `intermediateStops`
+contains only the ordered stops between those endpoints and may include their
+TfL StopPoint IDs. These fields are omitted when the path is incomplete,
+ambiguous or conflicts with the route endpoint identities; clients must then
+use the normal leg endpoints without inventing a station sequence. They are
+descriptive route evidence and do not change the viability decision.
+
 When TfL marks the selected candidate as an alternative, `alternativeRoute`
 is `true`. The response may also include up to three compact `alternatives`
 summaries for other candidates that were catchable at evaluation time and met
