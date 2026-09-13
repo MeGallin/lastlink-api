@@ -100,8 +100,8 @@ for (const [start, arrival, duration, deadline, clock, expected] of [
     const response = await supertest(app)
       .post('/api/v1/journey-check')
       .send({
-        origin: { name: 'Stratford' },
-        destination: { name: 'Waterloo' },
+        origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
+        destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
         arriveBy: deadline,
         safetyBufferMinutes: 5,
       });

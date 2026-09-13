@@ -49,10 +49,10 @@ await test('TfL journey request uses the official arriving-search shape', () => 
   assert.equal(result.requestKey.includes('app_key'), false);
 });
 
-await test('TfL journey request encodes free-text locations and omits optional filters', () => {
+await test('TfL journey request encodes Tube StopPoint IDs and omits optional filters', () => {
   const request = validatedRequest({
-    origin: { name: "King's Cross / St Pancras" },
-    destination: { name: 'London Bridge' },
+    origin: { name: "King's Cross St Pancras", tflStopPointId: '940GZZLUKSX' },
+    destination: { name: 'London Bridge', tflStopPointId: '940GZZLULNB' },
     constraints: { stepFreeRequired: false },
   });
   const result = buildTflJourneyPlannerRequest(request, {
@@ -61,7 +61,7 @@ await test('TfL journey request encodes free-text locations and omits optional f
 
   assert.equal(
     decodeURIComponent(result.url.pathname),
-    "/Journey/JourneyResults/King's Cross / St Pancras/to/London Bridge",
+    '/Journey/JourneyResults/940GZZLUKSX/to/940GZZLULNB',
   );
   assert.equal(result.url.searchParams.has('app_key'), false);
   assert.equal(result.url.searchParams.has('maxWalkingMinutes'), false);

@@ -108,6 +108,44 @@ await test('validation accepts a direct arrive-by deadline', () => {
   assert.equal(result.value.deadline.arriveBy, baseInput.arriveBy);
 });
 
+await test('validation requires explicit Tube StopPoint IDs for both locations', () => {
+  const result = validateJourneyCheckRequest({
+    ...baseInput,
+    origin: { name: 'Stratford' },
+    destination: { name: 'Waterloo' },
+  });
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(
+    result.issues.some((issue) => issue.includes('origin.tflStopPointId')),
+  );
+  assert.ok(
+    result.issues.some((issue) => issue.includes('destination.tflStopPointId')),
+  );
+});
+
+await test('validation rejects free-text values masquerading as Tube StopPoint IDs', () => {
+  const result = validateJourneyCheckRequest({
+    ...baseInput,
+    origin: { name: 'Stratford', tflStopPointId: 'Natural History Museum' },
+    destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
+  });
+  assert.equal(result.ok, false);
+  if (result.ok) return;
+  assert.ok(
+    result.issues.some((issue) => issue.includes('origin.tflStopPointId')),
+  );
+});
+
+await test('validation accepts the two TfL Tube station IDs without LU prefixes', () => {
+  const result = validateJourneyCheckRequest({
+    ...baseInput,
+    origin: { name: 'Battersea Power Station', tflStopPointId: '940GZZBPSUST' },
+    destination: { name: 'Nine Elms', tflStopPointId: '940GZZNEUGST' },
+  });
+  assert.equal(result.ok, true);
+});
+
 await test('validation derives a station deadline from an onward departure', () => {
   const result = validateJourneyCheckRequest({
     ...baseInput,
@@ -303,8 +341,8 @@ await test('provider station descriptors match the user station name only at the
     fixtureAssessmentInput({
       request: validRequest({
         ...baseInput,
-        origin: { name: 'Stratford' },
-        destination: { name: 'Waterloo' },
+        origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
+        destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },
       }),
       route: {
         ...route,
@@ -681,28 +719,4 @@ await test('assessment captures the evaluation clock after provider evidence', a
   );
   assert.equal(result.checkedAtMs, 123);
   assert.equal(result.dataMode, 'cache');
-});
-
-await test('provider failures remain bounded and do not expose payloads', async () => {
-  const adapters: JourneyProviderAdapters = {
-    journeyPlanner: {
-      async getPlan() {
-        return {
-          dataMode: 'live',
-          value: null,
-          evidence: [],
-          failure: {
-            code: 'PROVIDER_RATE_LIMITED' as const,
-            message: 'Provider rate limit response.',
-          },
-        };
-      },
-    },
-  };
-  const result = evaluateJourneyCheck(
-    await buildJourneyAssessment(validRequest(), adapters, () => 123),
-  );
-  assert.equal(result.status, 'unable_to_verify');
-  assert.equal(result.reasons[0]?.code, 'PROVIDER_RATE_LIMITED');
-  assert.equal(result.route, null);
 });

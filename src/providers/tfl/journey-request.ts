@@ -21,8 +21,8 @@ export function buildTflJourneyPlannerRequest(
     throw new Error('appKey must be a non-empty string when provided');
   }
 
-  const from = request.origin.tflStopPointId ?? request.origin.name;
-  const to = request.destination.tflStopPointId ?? request.destination.name;
+  const from = request.origin.tflStopPointId;
+  const to = request.destination.tflStopPointId;
   const endpoint = new URL(options.baseUrl.toString());
   const pathPrefix = endpoint.pathname.replace(/\/+$/, '');
   endpoint.pathname = `${pathPrefix}/Journey/JourneyResults/${encodeURIComponent(from)}/to/${encodeURIComponent(to)}`;

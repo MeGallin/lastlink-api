@@ -40,7 +40,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 20\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 20\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -65,7 +65,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"onwardDepartureAt\": \"2026-09-07T00:35:00+01:00\",\n  \"stationTransferMinutes\": 10,\n  \"safetyBufferMinutes\": 5\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"onwardDepartureAt\": \"2026-09-07T00:35:00+01:00\",\n  \"stationTransferMinutes\": 10,\n  \"safetyBufferMinutes\": 5\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -90,7 +90,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 10 }\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5,\n  \"constraints\": { \"walkingMinutesLimit\": 10 }\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -115,7 +115,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:20:00+01:00\",\n  \"safetyBufferMinutes\": 0\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:20:00+01:00\",\n  \"safetyBufferMinutes\": 0\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -140,7 +140,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Victoria\", \"tflStopPointId\": \"940GZZLUVIC\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Victoria\", \"tflStopPointId\": \"940GZZLUVIC\" },\n  \"arriveBy\": \"2026-09-07T00:25:00+01:00\",\n  \"safetyBufferMinutes\": 5\n}",
           "options": { "raw": { "language": "json" } }
         }
       },
@@ -165,7 +165,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"origin\": { \"name\": \"Stratford\" },\n  \"destination\": { \"name\": \"Waterloo\" },\n  \"arriveBy\": \"2026-09-07T00:25:00\",\n  \"safetyBufferMinutes\": 5\n}",
+          "raw": "{\n  \"origin\": { \"name\": \"Stratford\", \"tflStopPointId\": \"940GZZLUSTD\" },\n  \"destination\": { \"name\": \"Waterloo\", \"tflStopPointId\": \"940GZZLUWLO\" },\n  \"arriveBy\": \"2026-09-07T00:25:00\",\n  \"safetyBufferMinutes\": 5\n}",
           "options": { "raw": { "language": "json" } }
         }
       },

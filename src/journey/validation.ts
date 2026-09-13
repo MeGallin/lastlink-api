@@ -9,6 +9,8 @@ import { parseExplicitInstant } from './time.js';
 
 const MAX_NAME_LENGTH = 120;
 const MAX_IDENTIFIER_LENGTH = 100;
+const TFL_TUBE_STOP_POINT_ID =
+  /^(?:940GZZLU[A-Z0-9]{3}|940GZZBPSUST|940GZZNEUGST)$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -38,16 +40,6 @@ function readNonEmptyString(
   return value;
 }
 
-function readOptionalString(
-  value: unknown,
-  field: string,
-  maximum: number,
-  issues: string[],
-): string | undefined {
-  if (value === undefined) return undefined;
-  return readNonEmptyString(value, field, maximum, issues);
-}
-
 function readExplicitInstant(
   value: unknown,
   field: string,
@@ -69,12 +61,27 @@ function readExplicitInstant(
   return instant;
 }
 
-function readOptionalIdentifier(
+function readRequiredIdentifier(
   value: unknown,
   field: string,
   issues: string[],
 ): string | undefined {
-  return readOptionalString(value, field, MAX_IDENTIFIER_LENGTH, issues);
+  if (value === undefined) {
+    issues.push(`${field} must be a TfL Tube station identifier`);
+    return undefined;
+  }
+  const identifier = readNonEmptyString(
+    value,
+    field,
+    MAX_IDENTIFIER_LENGTH,
+    issues,
+  );
+  if (identifier === undefined) return undefined;
+  if (!TFL_TUBE_STOP_POINT_ID.test(identifier)) {
+    issues.push(`${field} must be a TfL Tube station identifier`);
+    return undefined;
+  }
+  return identifier;
 }
 
 export function validateJourneyCheckRequest(
@@ -149,18 +156,15 @@ function readOrigin(
     MAX_NAME_LENGTH,
     issues,
   );
-  const tflStopPointId = readOptionalIdentifier(
+  const tflStopPointId = readRequiredIdentifier(
     value.tflStopPointId,
     'origin.tflStopPointId',
     issues,
   );
-  if (
-    name === undefined ||
-    (value.tflStopPointId !== undefined && tflStopPointId === undefined)
-  ) {
+  if (name === undefined || tflStopPointId === undefined) {
     return undefined;
   }
-  return tflStopPointId === undefined ? { name } : { name, tflStopPointId };
+  return { name, tflStopPointId };
 }
 
 function readDestination(
@@ -176,18 +180,15 @@ function readDestination(
     MAX_NAME_LENGTH,
     issues,
   );
-  const tflStopPointId = readOptionalIdentifier(
+  const tflStopPointId = readRequiredIdentifier(
     value.tflStopPointId,
     'destination.tflStopPointId',
     issues,
   );
-  if (
-    name === undefined ||
-    (value.tflStopPointId !== undefined && tflStopPointId === undefined)
-  ) {
+  if (name === undefined || tflStopPointId === undefined) {
     return undefined;
   }
-  return tflStopPointId === undefined ? { name } : { name, tflStopPointId };
+  return { name, tflStopPointId };
 }
 
 function readDeadline(

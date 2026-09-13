@@ -36,6 +36,12 @@ configuration uses TfL Journey Planner only, with one request per evaluation,
 no retries and no fixture fallback. Live mode remains internal validation:
 timetable, arrivals and disruption corroboration are not yet connected.
 
+Both locations are intentionally Tube-station selections. The client sends a
+display name together with the selected station's TfL StopPoint ID. The API
+rejects a request without either ID, so Journey Planner never has to guess an
+arbitrary place. The former TfL `/Place/Search` convenience endpoint is not
+part of this contract because TfL retired it.
+
 ## Request
 
 Provider timestamps are normalized separately from user input. Offset-free TfL
@@ -72,8 +78,8 @@ onward departure:
 
 ```json
 {
-  "origin": { "name": "Stratford" },
-  "destination": { "name": "Waterloo" },
+  "origin": { "name": "Stratford", "tflStopPointId": "940GZZLUSTD" },
+  "destination": { "name": "Waterloo", "tflStopPointId": "940GZZLUWLO" },
   "onwardDepartureAt": "2026-09-07T00:35:00+01:00",
   "stationTransferMinutes": 10,
   "safetyBufferMinutes": 5,
@@ -91,9 +97,9 @@ is performed.
 | Field                             | Rule                                                                        |
 | --------------------------------- | --------------------------------------------------------------------------- |
 | `origin.name`                     | Required non-empty string, maximum 120 characters                           |
-| `origin.tflStopPointId`           | Optional TfL identifier hint; validate against provider evidence            |
+| `origin.tflStopPointId`           | Required TfL StopPoint identifier from the Tube station catalogue           |
 | `destination.name`                | Required non-empty string, maximum 120 characters                           |
-| `destination.tflStopPointId`      | Optional TfL identifier hint; do not infer silently                         |
+| `destination.tflStopPointId`      | Required TfL StopPoint identifier from the Tube station catalogue           |
 | `arriveBy`                        | Required when the direct form is used; ISO-8601 with explicit offset or `Z` |
 | `onwardDepartureAt`               | Required with `stationTransferMinutes` when deriving the deadline           |
 | `stationTransferMinutes`          | Integer 0–120; user assumption, not a measured platform guarantee           |

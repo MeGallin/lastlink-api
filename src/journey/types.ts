@@ -26,12 +26,12 @@ export type EvidenceCompleteness = 'sufficient' | 'partial';
 
 export interface JourneyLocationInput {
   name: string;
-  tflStopPointId?: string;
+  tflStopPointId: string;
 }
 
 export interface JourneyDestinationInput {
   name: string;
-  tflStopPointId?: string;
+  tflStopPointId: string;
 }
 
 export type JourneyDeadlineSource =

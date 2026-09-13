@@ -82,6 +82,15 @@ calculated margin and a conservative status (`viable`, `tight`, `not_viable` or
 `unable_to_verify`). They do not assert that an onward train is running or that
 the user will board it. See [the active TfL-only contract](docs/journey-check-contract-v0.2-tfl-only.md).
 
+### Tube-station locations
+
+Both locations are selected Tube stations from the client’s captured TfL
+StopPoint catalogue. The request includes the station display name and its TfL
+StopPoint ID; the API rejects a missing ID rather than asking Journey Planner to
+guess a place. The MVP does not search arbitrary places or use the retired TfL
+`/Place/Search` endpoint. This keeps the
+station-arrival promise explicit and prevents ambiguous provider resolution.
+
 ## Checks and Postman
 
 ```sh
@@ -111,7 +120,7 @@ mandatory for HTTP changes; direct HTTP checks do not replace its assertions.
   and labelled fixture inputs.
 - `src/providers/tfl/`: isolated TfL request, response and ranking seams.
 - `src/providers/contracts.ts`: narrow provider adapter contract.
-- `src/routes/journey-check.ts`: JSON HTTP boundary.
+- `src/routes/`: JSON HTTP boundary for journey checks.
 - `tests/`: automated unit, contract, provider and HTTP tests.
 - `postman/`: safe local collection and environment template.
 
