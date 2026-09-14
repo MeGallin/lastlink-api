@@ -77,7 +77,7 @@
             "exec": [
               "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
               "pm.test('Allowed origin is echoed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.equal(pm.variables.get('clientOrigin')));",
-              "pm.test('Origin is varied', () => pm.expect(pm.response.headers.get('Vary')).to.include('Origin'));"
+              "pm.test('Origin is varied', () => pm.expect(pm.response.headers.all().filter((header) => header.key.toLowerCase() === 'vary').some((header) => header.value.split(/[\\s,]+/).includes('Origin'))).to.equal(true));"
             ]
           }
         }
