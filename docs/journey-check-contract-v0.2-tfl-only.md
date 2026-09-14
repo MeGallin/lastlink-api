@@ -29,6 +29,18 @@ Rail integration.
 
 `POST /api/v1/journey-check`
 
+The service also exposes two non-provider operational endpoints:
+
+- `GET /health` is a process-liveness check and returns `{ status: "ok", service:
+"lastlink-api" }`.
+- `GET /ready` reports validated startup configuration and the selected
+  `dataMode` (`fixture` or `live`). It never calls TfL and does not claim that
+  provider access or any specific journey is available. Both responses are
+  `Cache-Control: no-store`.
+
+Render should use `/health` for its liveness probe. Operators may use `/ready`
+as a lightweight deployment check without consuming provider quota.
+
 The endpoint accepts JSON, rejects unknown fields, returns `Cache-Control:
 no-store`, and uses the existing `{ error: { code, message } }` input-error
 envelope. The route defaults to fixture mode. Explicit server-side live

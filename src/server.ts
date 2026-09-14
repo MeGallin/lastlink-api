@@ -7,6 +7,7 @@ const server = createApp(
   createAssessmentService(config.journeyProvider),
   config.corsOrigins,
   config.journeyRateLimit,
+  config.journeyProvider.mode,
 ).listen(config.port, () => {
   console.info(`LastLink API listening on port ${config.port}`);
 });

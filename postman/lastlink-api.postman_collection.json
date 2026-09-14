@@ -45,6 +45,26 @@
       ]
     },
     {
+      "name": "Readiness",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/ready"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Readiness contract', () => pm.expect(pm.response.json()).to.deep.equal({status: 'ready', service: 'lastlink-api', dataMode: pm.variables.get('expectedDataMode')}));",
+              "pm.test('Not cached', () => pm.expect(pm.response.headers.get('Cache-Control')).to.equal('no-store'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Unsupported health method",
       "request": {
         "method": "POST",
@@ -133,6 +153,7 @@
   ],
   "variable": [
     { "key": "clientOrigin", "value": "http://localhost:5173" },
-    { "key": "blockedOrigin", "value": "https://blocked.example.test" }
+    { "key": "blockedOrigin", "value": "https://blocked.example.test" },
+    { "key": "expectedDataMode", "value": "fixture" }
   ]
 }

@@ -13,6 +13,26 @@ await test('health reports process liveness without caching', async () => {
   assert.equal(response.headers['x-powered-by'], undefined);
 });
 
+await test('ready reports validated startup mode without provider calls', async () => {
+  const fixtureResponse = await request(createApp())
+    .get('/ready')
+    .expect(200)
+    .expect('Content-Type', /json/);
+  assert.deepEqual(fixtureResponse.body, {
+    status: 'ready',
+    service: 'lastlink-api',
+    dataMode: 'fixture',
+  });
+  assert.equal(fixtureResponse.headers['cache-control'], 'no-store');
+
+  const liveResponse = await request(
+    createApp(undefined, undefined, undefined, 'live'),
+  )
+    .get('/ready')
+    .expect(200);
+  assert.equal(liveResponse.body.dataMode, 'live');
+});
+
 await test('unknown routes return a JSON error', async () => {
   const response = await request(createApp()).get('/missing').expect(404);
   assert.deepEqual(response.body, {

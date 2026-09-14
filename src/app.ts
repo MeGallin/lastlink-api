@@ -7,10 +7,13 @@ import {
   type RateLimitOptions,
 } from './http/rate-limit.js';
 
+export type JourneyDataMode = 'fixture' | 'live';
+
 export function createApp(
   assess?: AssessmentService,
   corsOrigins: readonly string[] = defaultCorsOrigins,
   journeyRateLimit: RateLimitOptions = defaultJourneyRateLimit,
+  journeyDataMode: JourneyDataMode = 'fixture',
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -21,6 +24,17 @@ export function createApp(
   app.get('/health', (_request, response) => {
     response.set('Cache-Control', 'no-store');
     response.json({ status: 'ok', service: 'lastlink-api' });
+  });
+
+  // Startup readiness only: this reports validated runtime configuration and
+  // deliberately does not make a live provider call.
+  app.get('/ready', (_request, response) => {
+    response.set('Cache-Control', 'no-store');
+    response.json({
+      status: 'ready',
+      service: 'lastlink-api',
+      dataMode: journeyDataMode,
+    });
   });
 
   app.use(

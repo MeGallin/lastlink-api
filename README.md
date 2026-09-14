@@ -25,6 +25,17 @@ Open http://localhost:3000/health. It returns process liveness only:
 { "status": "ok", "service": "lastlink-api" }
 ```
 
+The non-provider `/ready` endpoint reports that startup configuration has been
+validated and identifies the selected data mode. It never calls TfL:
+
+```json
+{ "status": "ready", "service": "lastlink-api", "dataMode": "fixture" }
+```
+
+Use `/health` for Render's liveness probe and `/ready` for a lightweight
+deployment/readiness check. Neither endpoint proves that TfL is reachable or
+that a particular journey can be verified.
+
 Configuration defaults to `PORT=3000` and `NODE_ENV=development`. Copy
 `.env.example` to an ignored `.env` only when a local provider key is needed.
 The Node process runs independently of Apache/XAMPP even when stored under
@@ -144,9 +155,14 @@ The official Postman CLI can also execute these collection scripts locally:
 server with a future explicit-offset `arriveBy` variable. Postman execution is
 mandatory for HTTP changes; direct HTTP checks do not replace its assertions.
 
+The foundation collection's readiness assertion defaults to fixture mode. When
+running it against a live-mode deployment, override the expectation explicitly:
+`--env-var expectedDataMode=live`. This keeps the check honest in both modes.
+
 ## Layout
 
-- `src/app.ts`: Express setup, health route and journey-check route.
+- `src/app.ts`: Express setup, liveness/readiness routes and journey-check
+  route.
 - `src/journey/`: request validation, deterministic evaluation, fixture adapter
   and labelled fixture inputs.
 - `src/providers/tfl/`: isolated TfL request, response and ranking seams.
@@ -165,10 +181,12 @@ explicitly approved. See [the mandatory review workflow](docs/code-review-workfl
 No live provider calls or credentials belong in tests.
 
 Use port 3001 for container testing so the owner's VS Code server can remain on
-port 3000. A free Render deployment is now live for deterministic fixture
-staging at `https://lastlink-api.onrender.com`; it is not a live-provider or
-passenger-advice deployment. Client hosting and any separately approved live
-provider configuration remain deferred.
+port 3000. The API is deployed at `https://lastlink-api.onrender.com`; its
+current hosted configuration is live-provider mode for controlled internal
+validation, not a guarantee of passenger advice. The static client is published
+at `https://lastlink.livenotice.co.uk`. Keep the deployment's CORS allowlist and
+provider secret configuration in Render; do not copy those values into this
+repository or into the client build.
 
 ## Project context
 
