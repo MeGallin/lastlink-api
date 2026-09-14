@@ -1,10 +1,15 @@
 import { defaultCorsOrigins } from './http/cors.js';
+import {
+  defaultJourneyRateLimit,
+  type RateLimitOptions,
+} from './http/rate-limit.js';
 
 export interface Config {
   port: number;
   nodeEnv: 'development' | 'test' | 'production';
   journeyProvider: JourneyProviderConfig;
   corsOrigins: readonly string[];
+  journeyRateLimit: RateLimitOptions;
 }
 
 export type JourneyProviderConfig =
@@ -66,6 +71,7 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
       nodeEnv,
       journeyProvider: { mode },
       corsOrigins: readCorsOrigins(env.CORS_ORIGINS),
+      journeyRateLimit: readJourneyRateLimit(env),
     };
   }
   const appKey = env.TFL_APP_KEY;
@@ -79,5 +85,53 @@ export function readConfig(env: NodeJS.ProcessEnv): Config {
     nodeEnv,
     journeyProvider: { mode, appKey },
     corsOrigins: readCorsOrigins(env.CORS_ORIGINS),
+    journeyRateLimit: readJourneyRateLimit(env),
   };
+}
+
+function readJourneyRateLimit(env: NodeJS.ProcessEnv): RateLimitOptions {
+  const clientIpHeader = readRateLimitClientIpHeader(env);
+  return {
+    ...defaultJourneyRateLimit,
+    windowMs: readPositiveInteger(
+      env.JOURNEY_RATE_LIMIT_WINDOW_MS,
+      'JOURNEY_RATE_LIMIT_WINDOW_MS',
+      defaultJourneyRateLimit.windowMs,
+    ),
+    maxRequests: readPositiveInteger(
+      env.JOURNEY_RATE_LIMIT_MAX_REQUESTS,
+      'JOURNEY_RATE_LIMIT_MAX_REQUESTS',
+      defaultJourneyRateLimit.maxRequests,
+    ),
+    ...(clientIpHeader === undefined ? {} : { clientIpHeader }),
+  };
+}
+
+function readRateLimitClientIpHeader(
+  env: NodeJS.ProcessEnv,
+): 'cf-connecting-ip' | undefined {
+  const value = env.RATE_LIMIT_CLIENT_IP_HEADER;
+  if (value === undefined) return undefined;
+  if (value.toLowerCase() !== 'cf-connecting-ip') {
+    throw new Error(
+      'RATE_LIMIT_CLIENT_IP_HEADER must be CF-Connecting-IP when set',
+    );
+  }
+  return 'cf-connecting-ip';
+}
+
+function readPositiveInteger(
+  value: string | undefined,
+  name: string,
+  fallback: number,
+): number {
+  if (value === undefined) return fallback;
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`${name} must be a positive safe integer`);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive safe integer`);
+  }
+  return parsed;
 }

@@ -36,6 +36,35 @@ configuration uses TfL Journey Planner only, with one request per evaluation,
 no retries and no fixture fallback. Live mode remains internal validation:
 timetable, arrivals and disruption corroboration are not yet connected.
 
+To absorb accidental or abusive bursts, the POST route applies a bounded,
+per-process fixed-window limit. The default is 30 requests per observed client
+address per 60 seconds; deployments can tune the window and maximum through
+`JOURNEY_RATE_LIMIT_WINDOW_MS` and `JOURNEY_RATE_LIMIT_MAX_REQUESTS`. A limited
+request returns HTTP 429, `Cache-Control: no-store`, `Retry-After` and the
+following safe error envelope:
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many journey checks. Please wait a moment and try again."
+  }
+}
+```
+
+This is an application-level guard for the current single-process deployment,
+not a distributed edge limit. A multi-instance production deployment still
+needs a shared or edge-enforced policy.
+
+The limiter uses the connection address by default and never trusts
+`X-Forwarded-For`. For the public Render deployment only, set
+`RATE_LIMIT_CLIENT_IP_HEADER=CF-Connecting-IP` after confirming the service is
+receiving traffic through Render's managed Cloudflare edge. Render documents
+that Cloudflare overwrites this single-value header before forwarding the
+request, making it suitable for the bucket identity; a missing, invalid or
+multi-value header falls back to the connection address. Do not configure an
+arbitrary header or guessed proxy-hop count.
+
 Both locations are intentionally Tube-station selections. The client sends a
 display name together with the selected station's TfL StopPoint ID. The API
 rejects a request without either ID, so Journey Planner never has to guess an

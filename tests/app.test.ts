@@ -40,6 +40,10 @@ await test('CORS allows an explicitly configured client origin', async () => {
     response.headers['access-control-allow-headers'],
     'Content-Type',
   );
+  assert.equal(
+    response.headers['access-control-expose-headers'],
+    'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After',
+  );
 });
 
 await test('CORS preflight returns the configured methods and headers', async () => {
@@ -107,6 +111,122 @@ await test('journey-check honours the requested buffer and walking limit', async
     .expect(200);
   assert.equal(walkingFailure.body.status, 'not_viable');
   assert.equal(walkingFailure.body.reasons[0].code, 'NO_MATCHING_ROUTE');
+});
+
+await test('journey-check rate limiting protects bursts and preserves CORS', async () => {
+  const origin = 'https://lastlink.livenotice.co.uk';
+  const app = createApp(undefined, [origin], {
+    windowMs: 1_000,
+    maxRequests: 2,
+    maxEntries: 10,
+  });
+
+  const first = await request(app)
+    .post('/api/v1/journey-check')
+    .set('Origin', origin)
+    .send(journeyRequest)
+    .expect(200);
+  assert.equal(first.headers['ratelimit-limit'], '2');
+  assert.equal(first.headers['ratelimit-remaining'], '1');
+
+  await request(app)
+    .post('/api/v1/journey-check')
+    .set('Origin', origin)
+    .send(journeyRequest)
+    .expect(200);
+
+  const limited = await request(app)
+    .post('/api/v1/journey-check')
+    .set('Origin', origin)
+    .send(journeyRequest)
+    .expect(429);
+  assert.deepEqual(limited.body, {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many journey checks. Please wait a moment and try again.',
+    },
+  });
+  assert.equal(limited.headers['access-control-allow-origin'], origin);
+  assert.equal(limited.headers['cache-control'], 'no-store');
+  assert.equal(limited.headers['ratelimit-remaining'], '0');
+  assert.equal(limited.headers['retry-after'], '1');
+});
+
+await test('journey-check rate-limit window expires without a timer leak', async () => {
+  let now = 10_000;
+  const app = createApp(undefined, undefined, {
+    windowMs: 1_000,
+    maxRequests: 1,
+    maxEntries: 10,
+    now: () => now,
+  });
+  await request(app)
+    .post('/api/v1/journey-check')
+    .send(journeyRequest)
+    .expect(200);
+  await request(app)
+    .post('/api/v1/journey-check')
+    .send(journeyRequest)
+    .expect(429);
+  now += 1_000;
+  await request(app)
+    .post('/api/v1/journey-check')
+    .send(journeyRequest)
+    .expect(200);
+});
+
+await test('verified hosting client identities receive separate bounded buckets', async () => {
+  const app = createApp(undefined, undefined, {
+    windowMs: 60_000,
+    maxRequests: 1,
+    maxEntries: 2,
+    clientIpHeader: 'cf-connecting-ip',
+  });
+  const asClient = (address: string) =>
+    request(app)
+      .post('/api/v1/journey-check')
+      .set('CF-Connecting-IP', address)
+      .set('X-Forwarded-For', '203.0.113.99')
+      .send(journeyRequest);
+
+  await asClient('198.51.100.10').expect(200);
+  await asClient('198.51.100.11').expect(200);
+  await asClient('198.51.100.10').expect(429);
+  await asClient('198.51.100.12').expect(200);
+  await asClient('198.51.100.10').expect(200);
+});
+
+await test('configured client header rejects spoofed or multi-value identities', async () => {
+  const app = createApp(undefined, undefined, {
+    windowMs: 60_000,
+    maxRequests: 1,
+    maxEntries: 10,
+    clientIpHeader: 'cf-connecting-ip',
+  });
+  const body = (header: string) =>
+    request(app)
+      .post('/api/v1/journey-check')
+      .set('CF-Connecting-IP', header)
+      .send(journeyRequest);
+
+  await body('198.51.100.20, 198.51.100.21').expect(200);
+  await body('198.51.100.22, 198.51.100.23').expect(429);
+});
+
+await test('local mode ignores untrusted forwarding headers for rate-limit identity', async () => {
+  const app = createApp(undefined, undefined, {
+    windowMs: 60_000,
+    maxRequests: 1,
+    maxEntries: 10,
+  });
+  const body = (address: string) =>
+    request(app)
+      .post('/api/v1/journey-check')
+      .set('X-Forwarded-For', address)
+      .send(journeyRequest);
+
+  await body('198.51.100.30').expect(200);
+  await body('198.51.100.31').expect(429);
 });
 
 await test('journey-check returns a conservative result when no fixture matches', async () => {

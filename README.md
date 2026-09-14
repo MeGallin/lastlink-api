@@ -36,6 +36,24 @@ Vite dev and preview origins. Render must set the production client origin
 (`https://lastlink.livenotice.co.uk`) alongside any local origins needed for
 testing; paths, wildcards and trailing slashes are rejected.
 
+Journey checks also have a small per-process burst guard. The defaults allow 30
+requests per observed client address in a 60-second window. Render can tune
+`JOURNEY_RATE_LIMIT_WINDOW_MS` and `JOURNEY_RATE_LIMIT_MAX_REQUESTS` as positive
+safe integers. A limited request returns HTTP 429 with `Retry-After` and a
+`RATE_LIMITED` error. This guard is deliberately bounded and in-process; it
+reduces accidental bursts on the single service instance but is not a substitute
+for a distributed edge limit if the deployment scales out.
+
+For the public Render deployment, the limiter can use the single-value
+`CF-Connecting-IP` header by setting `RATE_LIMIT_CLIENT_IP_HEADER=CF-Connecting-IP`.
+Render documents that its managed Cloudflare edge overwrites this header before
+the request reaches the service, so the value cannot be chosen by a browser.
+Leave the variable unset for local or other direct traffic; the limiter then
+uses the connection address and ignores forwarded headers. `X-Forwarded-For` is
+never used for bucket identity because callers can supply extra entries before
+an upstream proxy appends its own value. A missing or invalid configured header
+falls back to the connection address rather than trusting unvalidated input.
+
 ### Optional live validation
 
 Keep `JOURNEY_DATA_MODE=fixture` for the existing Postman regression collection.
@@ -70,6 +88,13 @@ Do not run the fixture collection in live mode.
 `POST /api/v1/journey-check` accepts a direct `arriveBy` timestamp or derives a
 station deadline from `onwardDepartureAt` minus `stationTransferMinutes`. Both
 forms require an explicit ISO-8601 offset or `Z`.
+
+The endpoint returns HTTP 429 when the per-process journey-check burst limit is
+exceeded. The JSON body is `{ "error": { "code": "RATE_LIMITED", "message":
+"Too many journey checks. Please wait a moment and try again." } }`; clients
+should honor the `Retry-After` response header. CORS and `Cache-Control:
+no-store` headers remain present on this response; the rate-limit headers are
+exposed to browser clients.
 
 Example:
 

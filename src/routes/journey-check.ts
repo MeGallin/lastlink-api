@@ -5,9 +5,15 @@ import { createFixtureAssessment } from '../journey/fixture-adapter.js';
 import type { AssessmentService } from '../journey/assessment-service.js';
 import type { JourneyCheckResponse } from '../journey/types.js';
 import { validateJourneyCheckRequest } from '../journey/validation.js';
+import {
+  createRateLimitMiddleware,
+  defaultJourneyRateLimit,
+  type RateLimitOptions,
+} from '../http/rate-limit.js';
 
 export function createJourneyRouter(
   assess: AssessmentService = createFixtureAssessment,
+  journeyRateLimit: RateLimitOptions = defaultJourneyRateLimit,
 ): Router {
   const router = Router();
   router.use((_request, response, next) => {
@@ -17,6 +23,7 @@ export function createJourneyRouter(
 
   router.post(
     '/',
+    createRateLimitMiddleware(journeyRateLimit),
     requireJson,
     json({ limit: '8kb' }),
     async (request, response) => {

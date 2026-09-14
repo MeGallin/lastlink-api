@@ -9,6 +9,8 @@ export const defaultCorsOrigins = [
 
 const corsMethods = 'GET, POST, OPTIONS';
 const corsHeaders = 'Content-Type';
+const corsExposedHeaders =
+  'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After';
 
 export function createCorsMiddleware(
   allowedOrigins: readonly string[],
@@ -36,6 +38,7 @@ export function createCorsMiddleware(
     response.set('Access-Control-Allow-Origin', origin);
     response.set('Access-Control-Allow-Methods', corsMethods);
     response.set('Access-Control-Allow-Headers', corsHeaders);
+    response.set('Access-Control-Expose-Headers', corsExposedHeaders);
     response.set('Access-Control-Max-Age', '600');
 
     if (request.method === 'OPTIONS') {
