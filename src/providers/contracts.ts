@@ -40,6 +40,15 @@ export interface JourneyPlannerAdapter {
   ): Promise<ProviderSnapshot<NormalizedJourneyPlan>>;
 }
 
+export interface JourneyCorroborationAdapter {
+  getEvidence(
+    request: ValidatedJourneyCheckRequest,
+    route: JourneyRoute,
+    capturedAtMs?: number,
+  ): Promise<{ evidence: EvidenceRecord[]; warnings: string[] }>;
+}
+
 export interface JourneyProviderAdapters {
   journeyPlanner: JourneyPlannerAdapter;
+  corroboration?: JourneyCorroborationAdapter;
 }

@@ -149,5 +149,6 @@ export function toFixtureAssessment(
     transferMinutes: fixture.transferMinutes,
     evidence: fixture.evidence,
     providerIssues: [],
+    providerWarnings: [],
   };
 }

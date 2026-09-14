@@ -26,6 +26,29 @@ export async function buildJourneyAssessment(
         },
       ]
     : [];
+  let evidence = [...planSnapshot.evidence];
+  let providerWarnings: string[] = [];
+  if (
+    planSnapshot.value?.route !== null &&
+    planSnapshot.value?.route !== undefined
+  ) {
+    const corroboration = adapters.corroboration;
+    if (corroboration !== undefined) {
+      try {
+        const result = await corroboration.getEvidence(
+          request,
+          planSnapshot.value.route,
+          checkedAtMs,
+        );
+        evidence = [...evidence, ...result.evidence];
+        providerWarnings = result.warnings;
+      } catch {
+        providerWarnings = [
+          'Optional TfL corroboration could not be completed; the route remains Journey Planner evidence only.',
+        ];
+      }
+    }
+  }
 
   return {
     request,
@@ -33,7 +56,8 @@ export async function buildJourneyAssessment(
     dataMode: planSnapshot.dataMode,
     route: planSnapshot.value?.route ?? null,
     transferMinutes: planSnapshot.value?.transferMinutes ?? 0,
-    evidence: planSnapshot.evidence,
+    evidence,
     providerIssues,
+    providerWarnings,
   };
 }

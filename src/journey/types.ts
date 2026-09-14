@@ -112,6 +112,8 @@ export interface JourneyRouteAlternative {
 export interface JourneyRouteLeg {
   mode: RouteMode;
   lineName?: string;
+  /** Provider line identity used only for optional corroboration calls. */
+  lineId?: string;
   directions?: string[];
   from: string;
   /** TfL StopPoint identity for the leg origin, when the provider supplies it. */
@@ -168,6 +170,7 @@ export interface JourneyAssessmentInput {
   transferMinutes: number;
   evidence: EvidenceRecord[];
   providerIssues: JourneyReason[];
+  providerWarnings: string[];
 }
 
 export interface JourneyEvaluationPolicy {

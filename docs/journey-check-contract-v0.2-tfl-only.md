@@ -54,9 +54,19 @@ correlation during operational investigation.
 The endpoint accepts JSON, rejects unknown fields, returns `Cache-Control:
 no-store`, and uses the existing `{ error: { code, message } }` input-error
 envelope. The route defaults to fixture mode. Explicit server-side live
-configuration uses TfL Journey Planner only, with one request per evaluation,
-no retries and no fixture fallback. Live mode remains internal validation:
-timetable, arrivals and disruption corroboration are not yet connected.
+configuration uses TfL Journey Planner as the decision source, with one request
+per evaluation, no retries and no fixture fallback. Live mode also makes
+bounded, optional corroboration calls for arrivals, timetable and line status
+when the selected route exposes the required provider identity. Those feeds are
+evidence only: a missing, empty or failed corroboration feed adds a safe warning
+and never blocks or upgrades the station-arrival decision. The response remains
+station-only and must not be read as confirmation that a user will board a
+specific service.
+
+Live corroboration is deliberately budgeted to one request per feed per
+evaluation. It is best-effort operational context, not a new viability rule;
+the Journey Planner result remains the authoritative route and deadline
+calculation for this contract.
 
 To absorb accidental or abusive bursts, the POST route applies a bounded,
 per-process fixed-window limit. The default is 30 requests per observed client
@@ -249,10 +259,14 @@ change the deterministic viability status, create an alternative route, or
 mean that a missing notice proves good service. A leg marked disrupted without
 usable provider text receives a bounded generic disruption notice. Invalid or
 empty notice entries are ignored by the adapter; raw provider payloads are not
-forwarded. The
-current live adapter does not yet corroborate them with the separate TfL
-Arrivals endpoints. Invalid optional scheduled timestamps invalidate the
-provider response rather than being silently displayed.
+forwarded. Invalid optional scheduled timestamps invalidate the provider
+response rather than being silently displayed. When route identity is available,
+the live adapter may add separate `tfl_arrivals`, `tfl_timetable` and
+`tfl_line_status` evidence records. These records confirm that the corresponding
+TfL feed returned usable data at the capture time; they do not assert that a
+particular vehicle will arrive, that a service will remain available, or that a
+passenger will board it. If a feed is unavailable, the response contains a
+bounded warning and keeps the Journey Planner result unchanged.
 
 For a Tube leg, the response may also include `stopCount` and
 `intermediateStops` when TfL supplies a trustworthy ordered `path.stopPoints`

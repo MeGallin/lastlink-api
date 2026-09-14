@@ -188,7 +188,7 @@ function normalizeLeg(
   const from = readPoint(rawLeg.departurePoint);
   const to = readPoint(rawLeg.arrivalPoint);
   const mode = readMode(rawLeg.mode);
-  const lineName = readLineName(rawLeg.routeOptions);
+  const line = readLineDetails(rawLeg.routeOptions);
   const directions = readDirections(rawLeg.routeOptions);
   const scheduledDeparture = readOptionalProviderInstant(
     rawLeg.scheduledDepartureTime,
@@ -205,7 +205,7 @@ function normalizeLeg(
   const stationSequence = readTubeStationSequence(
     rawLeg.path,
     mode,
-    lineName,
+    line?.name,
     from,
     to,
   );
@@ -245,7 +245,8 @@ function normalizeLeg(
       durationMinutes,
       routeLeg: {
         mode,
-        ...(lineName === undefined ? {} : { lineName }),
+        ...(line?.name === undefined ? {} : { lineName: line.name }),
+        ...(line?.id === undefined ? {} : { lineId: line.id }),
         ...(directions === undefined ? {} : { directions }),
         from: from.name,
         ...(from.tflStopPointId === undefined
@@ -428,12 +429,20 @@ function readMode(value: unknown): RouteMode | undefined {
   return 'other';
 }
 
-function readLineName(value: unknown): string | undefined {
+function readLineDetails(
+  value: unknown,
+): { name?: string; id?: string } | undefined {
   if (!Array.isArray(value)) return undefined;
   for (const option of value) {
     if (!isRecord(option)) continue;
-    const name = option.name;
-    if (typeof name === 'string' && name.trim() !== '') return name.trim();
+    const name = readOptionalText(option.name);
+    const id = readOptionalText(option.id);
+    if (name !== undefined || id !== undefined) {
+      return {
+        ...(name === undefined ? {} : { name }),
+        ...(id === undefined ? {} : { id }),
+      };
+    }
   }
   return undefined;
 }

@@ -46,9 +46,10 @@ export function evaluateJourneyCheck(
         ? [fixtureWarning]
         : input.dataMode === 'live'
           ? [
-              'Internal validation only: Journey Planner evidence has not been corroborated with timetable, arrivals or disruption checks. Do not rely on this prototype for travel.',
+              'Internal validation only: Journey Planner evidence supports reaching the station. Optional arrivals, timetable and line-status checks are best effort and do not verify boarding or onward services. Do not rely on this prototype for travel.',
+              ...input.providerWarnings,
             ]
-          : [],
+          : input.providerWarnings,
   };
 
   const modeIssue = findModeIssue(input);

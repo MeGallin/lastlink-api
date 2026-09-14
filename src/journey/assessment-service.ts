@@ -5,6 +5,7 @@ import {
 } from '../providers/http-client.js';
 import { createProviderRequestBudget } from '../providers/request-budget.js';
 import { createTflJourneyPlannerAdapter } from '../providers/tfl/journey-adapter.js';
+import { createTflCorroborationAdapter } from '../providers/tfl/corroboration.js';
 import { buildJourneyAssessment } from './assessment.js';
 import { createFixtureAssessment } from './fixture-adapter.js';
 import type {
@@ -27,34 +28,46 @@ export function createAssessmentService(
     // Counters belong to one evaluation, never to the process or another user.
     const budget = createProviderRequestBudget({
       journeyPlanner: 1,
-      timetable: 0,
-      arrivals: 0,
-      lineStatus: 0,
+      timetable: 1,
+      arrivals: 1,
+      lineStatus: 1,
       stopDisruption: 0,
     });
-    let attempt = 0;
+    const budgetedClient = (
+      operation: 'journeyPlanner' | 'timetable' | 'arrivals' | 'lineStatus',
+    ): ProviderHttpClient => ({
+      async getJson(url) {
+        const reservation = budget.reserve(
+          operation,
+          `${operation}:${url.pathname}`,
+        );
+        if (!reservation.allowed) {
+          return {
+            ok: false,
+            failure: {
+              code: 'PROVIDER_UNAVAILABLE',
+              message: 'Journey request budget exhausted.',
+            },
+          };
+        }
+        return transport.getJson(url);
+      },
+    });
     const adapter = createTflJourneyPlannerAdapter({
       baseUrl: new URL('https://api.tfl.gov.uk'),
       appKey: config.appKey,
       transferMinutes: 0, // The request already accounts for the user's station transfer.
       readClock,
-      client: {
-        async getJson(url) {
-          const reservation = budget.reserve(
-            'journeyPlanner',
-            String(++attempt),
-          );
-          if (!reservation.allowed) {
-            return {
-              ok: false,
-              failure: {
-                code: 'PROVIDER_UNAVAILABLE',
-                message: 'Journey request budget exhausted.',
-              },
-            };
-          }
-          return transport.getJson(url);
-        },
+      client: budgetedClient('journeyPlanner'),
+    });
+    const corroboration = createTflCorroborationAdapter({
+      baseUrl: new URL('https://api.tfl.gov.uk'),
+      appKey: config.appKey,
+      readClock,
+      clients: {
+        arrivals: budgetedClient('arrivals'),
+        timetable: budgetedClient('timetable'),
+        lineStatus: budgetedClient('lineStatus'),
       },
     });
     return buildJourneyAssessment(
@@ -78,6 +91,7 @@ export function createAssessmentService(
             }
           },
         },
+        corroboration,
       },
       readClock,
     );

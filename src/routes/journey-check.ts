@@ -65,6 +65,7 @@ function stripInternalRouteIdentity(
       ...value.route,
       legs: value.route.legs.map((leg) => {
         const publicLeg = { ...leg };
+        delete publicLeg.lineId;
         delete publicLeg.fromInterchangeId;
         delete publicLeg.toInterchangeId;
         return publicLeg;

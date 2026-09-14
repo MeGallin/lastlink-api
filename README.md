@@ -85,14 +85,17 @@ Never put the key in Postman, a request body, screenshots or Git. Live startup
 fails if the key is missing or contains whitespace; fixture mode ignores it.
 
 Each evaluation permits one Journey Planner request, with a five-second transport
-timeout and no retries or fixture fallback. Budgets are per evaluation, not an
+timeout and no retries or fixture fallback. Live evaluations may also make at
+most one optional arrivals, timetable and line-status request each when route
+identity is available. These corroboration calls never decide viability: a
+missing or failed feed is surfaced as a warning while the Journey Planner
+station-arrival result remains authoritative. Budgets are per evaluation, not an
 account-wide quota or spend cap. Do not expose this unauthenticated prototype
 publicly. Provider failures produce a labelled live `unable_to_verify` response.
 No extra transfer allowance is subtracted: a derived deadline already includes
 the user's station-transfer allowance.
 
-Only Journey Planner is connected. Timetable, arrivals and disruption
-cross-checks remain deferred. Offset-free Journey Planner timestamps in years
+Offset-free Journey Planner timestamps in years
 2000–2099 are interpreted as Europe/London time only when exactly one GMT/BST
 instant matches the runtime's timezone rules. Missing spring hours and repeated
 autumn hours are rejected, not guessed. Explicit offsets are preserved.

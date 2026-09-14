@@ -41,6 +41,7 @@ function fixtureAssessmentInput(
     transferMinutes: fixture.transferMinutes,
     evidence: fixture.evidence,
     providerIssues: [],
+    providerWarnings: [],
     ...overrides,
   };
 }
@@ -719,4 +720,33 @@ await test('assessment captures the evaluation clock after provider evidence', a
   );
   assert.equal(result.checkedAtMs, 123);
   assert.equal(result.dataMode, 'cache');
+});
+
+await test('assessment shares its capture time with optional corroboration', async () => {
+  const capturedAtMs = 123;
+  let corroborationCapture: number | undefined;
+  const adapters: JourneyProviderAdapters = {
+    journeyPlanner: {
+      async getPlan() {
+        return {
+          dataMode: 'live',
+          value: { route: oneLegRoute(), transferMinutes: 0 },
+          evidence: [],
+        };
+      },
+    },
+    corroboration: {
+      async getEvidence(_request, _route, sharedCapture) {
+        corroborationCapture = sharedCapture;
+        return { evidence: [], warnings: [] };
+      },
+    },
+  };
+  const result = await buildJourneyAssessment(
+    validRequest(),
+    adapters,
+    () => capturedAtMs,
+  );
+  assert.equal(result.checkedAtMs, capturedAtMs);
+  assert.equal(corroborationCapture, capturedAtMs);
 });

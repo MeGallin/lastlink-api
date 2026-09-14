@@ -78,6 +78,7 @@ await test('telemetry marks live provider verification failures as degraded', as
         message: 'Journey provider could not verify this request.',
       },
     ],
+    providerWarnings: [],
   });
   const app = createApp(assessment, undefined, undefined, 'live', {
     logger: (event) => events.push(event),
