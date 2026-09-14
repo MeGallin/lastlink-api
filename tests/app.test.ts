@@ -24,6 +24,48 @@ await test('unsupported health method does not report success', async () => {
   await request(createApp()).post('/health').expect(404);
 });
 
+await test('CORS allows an explicitly configured client origin', async () => {
+  const origin = 'https://lastlink.livenotice.co.uk';
+  const response = await request(createApp(undefined, [origin]))
+    .get('/health')
+    .set('Origin', origin)
+    .expect(200);
+  assert.equal(response.headers['access-control-allow-origin'], origin);
+  assert.equal(response.headers.vary, 'Origin');
+  assert.equal(
+    response.headers['access-control-allow-methods'],
+    'GET, POST, OPTIONS',
+  );
+  assert.equal(
+    response.headers['access-control-allow-headers'],
+    'Content-Type',
+  );
+});
+
+await test('CORS preflight returns the configured methods and headers', async () => {
+  const origin = 'http://localhost:5173';
+  const response = await request(createApp(undefined, [origin]))
+    .options('/api/v1/journey-check')
+    .set('Origin', origin)
+    .set('Access-Control-Request-Method', 'POST')
+    .set('Access-Control-Request-Headers', 'Content-Type')
+    .expect(204);
+  assert.equal(response.headers['access-control-allow-origin'], origin);
+  assert.equal(response.headers['access-control-max-age'], '600');
+});
+
+await test('CORS rejects an origin outside the allowlist', async () => {
+  const response = await request(
+    createApp(undefined, ['https://lastlink.livenotice.co.uk']),
+  )
+    .get('/health')
+    .set('Origin', 'https://example.test')
+    .expect(403);
+  assert.deepEqual(response.body, {
+    error: { code: 'CORS_ORIGIN_NOT_ALLOWED', message: 'Origin not allowed' },
+  });
+});
+
 const journeyRequest = {
   origin: { name: 'Stratford', tflStopPointId: '940GZZLUSTD' },
   destination: { name: 'Waterloo', tflStopPointId: '940GZZLUWLO' },

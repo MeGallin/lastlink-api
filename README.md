@@ -30,6 +30,12 @@ Configuration defaults to `PORT=3000` and `NODE_ENV=development`. Copy
 The Node process runs independently of Apache/XAMPP even when stored under
 `htdocs`.
 
+`CORS_ORIGINS` is a comma-separated allowlist of exact `http` or `https` origins
+that may call the API from a browser. Local development defaults include the
+Vite dev and preview origins. Render must set the production client origin
+(`https://lastlink.livenotice.co.uk`) alongside any local origins needed for
+testing; paths, wildcards and trailing slashes are rejected.
+
 ### Optional live validation
 
 Keep `JOURNEY_DATA_MODE=fixture` for the existing Postman regression collection.
@@ -120,6 +126,7 @@ mandatory for HTTP changes; direct HTTP checks do not replace its assertions.
   and labelled fixture inputs.
 - `src/providers/tfl/`: isolated TfL request, response and ranking seams.
 - `src/providers/contracts.ts`: narrow provider adapter contract.
+- `src/http/cors.ts`: exact-origin browser access policy and preflight handling.
 - `src/routes/`: JSON HTTP boundary for journey checks.
 - `tests/`: automated unit, contract, provider and HTTP tests.
 - `postman/`: safe local collection and environment template.
@@ -133,7 +140,10 @@ explicitly approved. See [the mandatory review workflow](docs/code-review-workfl
 No live provider calls or credentials belong in tests.
 
 Use port 3001 for container testing so the owner's VS Code server can remain on
-port 3000. Render deployment remains deferred until provider validation.
+port 3000. A free Render deployment is now live for deterministic fixture
+staging at `https://lastlink-api.onrender.com`; it is not a live-provider or
+passenger-advice deployment. Client hosting and any separately approved live
+provider configuration remain deferred.
 
 ## Project context
 

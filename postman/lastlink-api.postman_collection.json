@@ -61,6 +61,78 @@
           }
         }
       ]
+    },
+    {
+      "name": "Health CORS",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Origin", "value": "{{clientOrigin}}" }],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Allowed origin is echoed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.equal(pm.variables.get('clientOrigin')));",
+              "pm.test('Origin is varied', () => pm.expect(pm.response.headers.get('Vary')).to.include('Origin'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Journey CORS preflight",
+      "request": {
+        "method": "OPTIONS",
+        "header": [
+          { "key": "Origin", "value": "{{clientOrigin}}" },
+          { "key": "Access-Control-Request-Method", "value": "POST" },
+          { "key": "Access-Control-Request-Headers", "value": "Content-Type" }
+        ],
+        "url": "{{baseUrl}}/api/v1/journey-check"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));",
+              "pm.test('Preflight origin is echoed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.equal(pm.variables.get('clientOrigin')));",
+              "pm.test('POST is allowed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Methods')).to.include('POST'));",
+              "pm.test('JSON header is allowed', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Headers')).to.include('Content-Type'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Blocked CORS origin",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Origin", "value": "{{blockedOrigin}}" }],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Blocked origin error', () => pm.expect(pm.response.json()).to.deep.equal({error: {code: 'CORS_ORIGIN_NOT_ALLOWED', message: 'Origin not allowed'}}));",
+              "pm.test('No allow header', () => pm.expect(pm.response.headers.get('Access-Control-Allow-Origin')).to.equal(undefined));"
+            ]
+          }
+        }
+      ]
     }
+  ],
+  "variable": [
+    { "key": "clientOrigin", "value": "http://localhost:5173" },
+    { "key": "blockedOrigin", "value": "https://blocked.example.test" }
   ]
 }

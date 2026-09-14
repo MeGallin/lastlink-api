@@ -1,11 +1,16 @@
 import express from 'express';
+import { createCorsMiddleware, defaultCorsOrigins } from './http/cors.js';
 import { createJourneyRouter } from './routes/journey-check.js';
 import type { AssessmentService } from './journey/assessment-service.js';
 
-export function createApp(assess?: AssessmentService) {
+export function createApp(
+  assess?: AssessmentService,
+  corsOrigins: readonly string[] = defaultCorsOrigins,
+) {
   const app = express();
   app.disable('x-powered-by');
   app.disable('etag');
+  app.use(createCorsMiddleware(corsOrigins));
 
   // Process liveness only: this does not verify transport data or journey viability.
   app.get('/health', (_request, response) => {

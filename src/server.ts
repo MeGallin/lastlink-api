@@ -5,6 +5,7 @@ import { createAssessmentService } from './journey/assessment-service.js';
 const config = readConfig(process.env);
 const server = createApp(
   createAssessmentService(config.journeyProvider),
+  config.corsOrigins,
 ).listen(config.port, () => {
   console.info(`LastLink API listening on port ${config.port}`);
 });

@@ -20,10 +20,12 @@ The canonical project memory remains in the separate planning workspace, at outp
   for risky or isolated work, or when the Product Owner requests it; no force pushes.
 - Mandatory independent reviewer gate BEFORE every commit and push: follow docs/code-review-workflow.md. Spawn a separate read-only code-review agent; the implementation agent cannot approve its own work. Fix blocking findings, rerun relevant checks and obtain re-review. No reviewer available means stop before commit/push.
 - Update the canonical planning memory at each checkpoint.
-- Current increment: Docker packaging verification. The build context includes
-  only the safe tracked `.env.example` placeholder so the build-stage safety
-  test can run; private `.env` remains excluded and is never copied into the
-  runtime image. Fixture remains default. No Darwin, frontend, database or
-  public deployment. Preserve the owner's VS Code server and private .env;
-  leave files unstaged for owner review. Live integration is not validated
-  passenger advice.
+- Current baseline: Docker packaging is verified and the reviewed `main`
+  commit is deployed as the free Render service `lastlink-api` in explicit
+  `JOURNEY_DATA_MODE=fixture`. The build context includes only the safe tracked
+  `.env.example` placeholder; private `.env` remains excluded and is never
+  copied into the runtime image. No Darwin, frontend or database integration is
+  part of this deployment, and live provider integration is not validated
+  passenger advice. `CORS_ORIGINS` is configured in Render as an exact
+  production/local allowlist. Preserve the owner's VS Code server and private
+  `.env`.
