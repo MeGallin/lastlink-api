@@ -62,7 +62,7 @@ await test('CORS allows an explicitly configured client origin', async () => {
   );
   assert.equal(
     response.headers['access-control-expose-headers'],
-    'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After',
+    'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-Request-Id',
   );
 });
 

@@ -10,6 +10,7 @@ import {
   defaultJourneyRateLimit,
   type RateLimitOptions,
 } from '../http/rate-limit.js';
+import type { TelemetryLocals } from '../http/telemetry.js';
 
 export function createJourneyRouter(
   assess: AssessmentService = createFixtureAssessment,
@@ -38,9 +39,14 @@ export function createJourneyRouter(
         return;
       }
       const assessment = await assess(validation.value);
-      response.json(
-        stripInternalRouteIdentity(evaluateJourneyCheck(assessment)),
+      const result = stripInternalRouteIdentity(
+        evaluateJourneyCheck(assessment),
       );
+      if (result.dataMode === 'live') {
+        (response.locals as TelemetryLocals).providerOutcome =
+          result.status === 'unable_to_verify' ? 'degraded' : 'ok';
+      }
+      response.json(result);
     },
   );
 

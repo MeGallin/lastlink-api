@@ -36,6 +36,17 @@ Use `/health` for Render's liveness probe and `/ready` for a lightweight
 deployment/readiness check. Neither endpoint proves that TfL is reachable or
 that a particular journey can be verified.
 
+The server emits one redacted JSON `http_request` event per request to its
+structured log. Each event contains a generated `requestId`, method,
+allowlisted route label, HTTP status, duration and broad outcome; live journey
+checks also record whether provider evidence was `ok` or `degraded`. The status
+is `null` when a client aborts before response headers are sent. An
+aborted client connection is recorded as `aborted`, and the middleware emits at
+most one event even when a normal response close follows `finish`. Request
+bodies, query values, credentials and passenger details are never logged. The
+same request ID is returned in the `X-Request-Id` response header so a support
+log entry can be correlated without exposing request data.
+
 Configuration defaults to `PORT=3000` and `NODE_ENV=development`. Copy
 `.env.example` to an ignored `.env` only when a local provider key is needed.
 The Node process runs independently of Apache/XAMPP even when stored under

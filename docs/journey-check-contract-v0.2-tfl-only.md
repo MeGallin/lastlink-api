@@ -41,6 +41,16 @@ The service also exposes two non-provider operational endpoints:
 Render should use `/health` for its liveness probe. Operators may use `/ready`
 as a lightweight deployment check without consuming provider quota.
 
+The running server also emits a redacted structured `http_request` log event
+for each request. It contains only a generated request ID, method, allowlisted
+route label, status, duration and broad outcome, plus a live provider outcome
+when applicable. The status is `null` when a client aborts before response
+headers are sent. An aborted client connection is recorded as `aborted`, and
+the middleware emits at most one event even when a normal response close
+follows `finish`. Request bodies, query values, credentials and passenger
+details are excluded. The generated ID is returned as `X-Request-Id` for safe
+correlation during operational investigation.
+
 The endpoint accepts JSON, rejects unknown fields, returns `Cache-Control:
 no-store`, and uses the existing `{ error: { code, message } }` input-error
 envelope. The route defaults to fixture mode. Explicit server-side live

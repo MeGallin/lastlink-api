@@ -6,6 +6,10 @@ import {
   defaultJourneyRateLimit,
   type RateLimitOptions,
 } from './http/rate-limit.js';
+import {
+  createTelemetryMiddleware,
+  type TelemetryOptions,
+} from './http/telemetry.js';
 
 export type JourneyDataMode = 'fixture' | 'live';
 
@@ -14,10 +18,12 @@ export function createApp(
   corsOrigins: readonly string[] = defaultCorsOrigins,
   journeyRateLimit: RateLimitOptions = defaultJourneyRateLimit,
   journeyDataMode: JourneyDataMode = 'fixture',
+  telemetry: TelemetryOptions = {},
 ) {
   const app = express();
   app.disable('x-powered-by');
   app.disable('etag');
+  app.use(createTelemetryMiddleware(telemetry));
   app.use(createCorsMiddleware(corsOrigins));
 
   // Process liveness only: this does not verify transport data or journey viability.

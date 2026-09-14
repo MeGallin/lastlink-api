@@ -10,7 +10,7 @@ export const defaultCorsOrigins = [
 const corsMethods = 'GET, POST, OPTIONS';
 const corsHeaders = 'Content-Type';
 const corsExposedHeaders =
-  'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After';
+  'RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset, Retry-After, X-Request-Id';
 
 export function createCorsMiddleware(
   allowedOrigins: readonly string[],

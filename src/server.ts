@@ -8,6 +8,7 @@ const server = createApp(
   config.corsOrigins,
   config.journeyRateLimit,
   config.journeyProvider.mode,
+  { logger: (event) => console.info(JSON.stringify(event)) },
 ).listen(config.port, () => {
   console.info(`LastLink API listening on port ${config.port}`);
 });
